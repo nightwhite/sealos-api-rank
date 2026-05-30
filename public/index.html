@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sub2API 修炼榜</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body class="rank-page">
+    <main class="rank-shell">
+      <section id="entry" class="entry-card">
+        <div class="seal">榜</div>
+        <p class="eyebrow">SUB2API 修炼榜</p>
+        <h1>看看你的 Key 今日功绩如何</h1>
+        <p class="muted">日榜看今日功绩，月榜看月度境界。Key 只会保存在当前浏览器。</p>
+        <div class="key-form">
+          <input id="apiKeyInput" type="password" placeholder="输入你的 API Key" autocomplete="off" />
+          <button id="loadButton">进入排行榜</button>
+        </div>
+        <p id="entryError" class="error-text"></p>
+      </section>
+
+      <section id="leaderboard" class="leaderboard hidden">
+        <header class="hero-header">
+          <div>
+            <p class="eyebrow">SUB2API 修炼榜</p>
+            <h1 id="pageTitle">今日功绩榜</h1>
+            <p class="muted"><span>按消耗金额排序，Tokens 作为辅助参考。</span><span id="refreshHint" class="refresh-hint"></span></p>
+          </div>
+          <div class="mountain-art" aria-hidden="true">
+            <span class="vertical-banner">云山榜</span>
+            <span class="mountain-layer layer-one"></span>
+            <span class="mountain-layer layer-two"></span>
+          </div>
+          <div class="period-tabs">
+            <button data-period="daily" class="active">日榜</button>
+            <button data-period="monthly">月榜</button>
+          </div>
+        </header>
+
+        <section class="summary-grid">
+          <div class="realm-card">
+            <p id="currentRankLabel" class="muted">今日功绩</p>
+            <div class="realm-line">
+              <strong id="currentRankName">凡人试炼</strong>
+              <span id="currentUsage">$0.00 · 0 tokens</span>
+            </div>
+            <div class="progress"><div id="rankProgress"></div></div>
+            <div class="progress-meta"><span>当前修为</span><span id="nextRankHint">继续修炼</span></div>
+          </div>
+          <div class="rank-number-card">
+            <span>当前名次</span>
+            <strong id="currentRankNumber">-</strong>
+            <small>全站榜单</small>
+          </div>
+        </section>
+
+        <section class="rank-table-card">
+          <div class="rank-head"><span>名次</span><span>Key</span><span id="rankNameColumn">今日功绩</span><span>消耗</span><span>Tokens</span></div>
+          <div id="rankRows"></div>
+          <div id="emptyState" class="empty-state hidden">榜单还在闭关，稍后再来。</div>
+        </section>
+      </section>
+    </main>
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>

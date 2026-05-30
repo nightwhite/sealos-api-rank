@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>排行榜配置</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body class="admin-page">
+    <main class="admin-shell">
+      <section id="loginPanel" class="admin-card">
+        <h1>排行榜配置</h1>
+        <p class="muted">输入管理员密码后配置可见 Key 和境界规则。</p>
+        <div class="key-form light-form">
+          <input id="passwordInput" type="password" placeholder="管理员密码" />
+          <button id="loginButton">登录</button>
+        </div>
+        <p id="loginError" class="error-text"></p>
+      </section>
+
+      <section id="configPanel" class="admin-card hidden">
+        <div class="admin-title-row">
+          <div><h1>排行榜配置</h1><p class="muted">勾选允许公开展示的 Key。</p></div>
+          <button id="saveKeysButton">保存 Key</button>
+        </div>
+        <div id="keyList" class="admin-list"></div>
+
+        <div class="admin-title-row rules-title">
+          <div><h2>境界规则</h2><p class="muted">按消耗美金计算境界。</p></div>
+          <button id="saveRulesButton">保存规则</button>
+        </div>
+        <div class="period-tabs admin-tabs">
+          <button type="button" data-rule-period="daily" class="active">日榜</button>
+          <button type="button" data-rule-period="monthly">月榜</button>
+        </div>
+        <div id="ruleList" class="rule-list"></div>
+        <button id="addRuleButton" class="secondary-button">添加境界</button>
+        <p id="adminMessage" class="muted"></p>
+      </section>
+    </main>
+    <script src="/admin.js" type="module"></script>
+  </body>
+</html>
