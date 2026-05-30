@@ -11,3 +11,5 @@ reference/
 .DS_Store
 npm-debug.log*
 docs/
+
+.worktrees/
