@@ -13,6 +13,8 @@ export function createRankService({ client, db, now = () => new Date() }) {
         name: key.name || `Key #${key.id}`,
         maskedKey: maskApiKey(key.key),
         status: key.status,
+        quota: key.quota,
+        quotaUsed: key.quota_used,
       })));
 
       const activeKeys = keys.filter((key) => key.status === 'active');
@@ -93,6 +95,7 @@ async function loadUsageByKeyId(client, rankedKeys, period, dateRange) {
     usageByKeyId.set(String(key.id), {
       actualCost,
       realmCost: period === 'monthly' ? actualCost / dateRange.dayCount : actualCost,
+      requests: Number(stats.total_requests || 0),
       tokens: Number(stats.total_tokens || 0),
     });
   }

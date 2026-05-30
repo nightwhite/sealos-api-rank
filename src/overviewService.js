@@ -1,5 +1,4 @@
 import { createHash } from 'node:crypto';
-import { maskApiKey } from './mask.js';
 
 const timezone = 'Asia/Shanghai';
 const statusRules = [
@@ -13,60 +12,63 @@ const statusRules = [
 ];
 
 export function createOverviewService({ client, db, now = () => new Date() }) {
-  async function syncKeys() {
-    const users = await client.listUsers();
-    const keyGroups = await Promise.all((users.items || []).map(async (user) => {
-      const keys = await client.listUserAPIKeys(user.id);
-      return keys.map((key) => ({ ...key, userId: user.id }));
-    }));
-    db.replaceAPIKeys(keyGroups.flat().map((key) => ({
-      id: key.id,
-      userId: key.userId,
-      keyHash: hashAPIKey(key.key),
-      name: key.name || `Key #${key.id}`,
-      maskedKey: maskApiKey(key.key),
-      status: key.status,
-    })));
-  }
-
-  async function findOwner(apiKey) {
+  function findCachedKey(apiKey) {
     const normalized = String(apiKey || '').trim();
     if (!normalized) throw new Error('请先输入 API Key');
-    await syncKeys();
     const key = db.findAPIKeyByHash(hashAPIKey(normalized));
-    if (!key) throw new Error('未找到这个 API Key，请确认后再试');
+    if (!key) throw new Error('请等待榜单刷新后再查看');
     if (key.status !== 'active') throw new Error('这个 API Key 当前不可用');
     return key;
   }
 
   return {
     async getOverview({ apiKey }) {
-      const ownerKey = await findOwner(apiKey);
-      const summaryStats = await client.getAdminUsageStats({ api_key_id: Number(ownerKey.id), period: 'today', timezone });
+      const key = findCachedKey(apiKey);
+      const snapshot = db.getRankSnapshot('daily');
+      const snapshotRow = (snapshot.rows || []).find((row) => String(row.keyId) === String(key.id));
+      if (!snapshot.refreshedAt || !snapshotRow) throw new Error('请等待榜单刷新后再查看');
+      const todayCost = Number(snapshotRow.actualCost || 0);
+      const todayRequests = Number(snapshotRow.requests || 0);
       const keyRows = [{
-        id: String(ownerKey.id),
-        name: ownerKey.name || `Key #${ownerKey.id}`,
-        maskedKey: ownerKey.maskedKey,
-        status: ownerKey.status,
-        todayCost: Number(summaryStats.total_actual_cost || 0),
-        todayRequests: Number(summaryStats.total_requests || 0),
+        id: String(key.id),
+        name: snapshotRow.keyName,
+        maskedKey: snapshotRow.maskedKey,
+        status: key.status,
+        quota: Number(key.quota || 0),
+        quotaUsed: Number(key.quotaUsed || 0),
+        quotaRemaining: quotaRemaining(key),
+        todayCost,
+        todayRequests,
       }];
       return {
-        refreshedAt: now().toISOString(),
-        user: { id: String(ownerKey.userId) },
+        refreshedAt: snapshot.refreshedAt,
+        user: null,
         summary: {
-          todayCost: Number(summaryStats.total_actual_cost || 0),
-          todayRequests: Number(summaryStats.total_requests || 0),
+          todayCost,
+          todayRequests,
           activeKeyCount: 1,
-          statusName: overviewStatusName(Number(summaryStats.total_actual_cost || 0)),
+          quota: Number(key.quota || 0),
+          quotaUsed: Number(key.quotaUsed || 0),
+          quotaRemaining: quotaRemaining(key),
+          statusName: overviewStatusName(todayCost),
         },
         keys: keyRows,
       };
     },
 
     async getRecords({ apiKey, page = 1, pageSize = 20 }) {
-      const ownerKey = await findOwner(apiKey);
-      const result = await client.listAdminUsage({ api_key_id: Number(ownerKey.id), page, page_size: pageSize, sort_by: 'created_at', sort_order: 'desc', timezone });
+      const key = findCachedKey(apiKey);
+      const today = formatLocalDate(now());
+      const result = await client.listAdminUsage({
+        api_key_id: Number(key.id),
+        page,
+        page_size: pageSize,
+        sort_by: 'created_at',
+        sort_order: 'desc',
+        timezone,
+        start_date: today,
+        end_date: today,
+      });
       return {
         page: Number(result.page || page),
         pageSize: Number(result.page_size || pageSize),
@@ -75,8 +77,8 @@ export function createOverviewService({ client, db, now = () => new Date() }) {
           return {
             id: String(item.id),
             createdAt: item.created_at,
-            keyName: ownerKey.name || `Key #${ownerKey.id}`,
-            maskedKey: ownerKey.maskedKey,
+            keyName: key.name || `Key #${key.id}`,
+            maskedKey: key.maskedKey,
             model: item.model || '-',
             requestType: item.request_type || '',
             cost: Number(item.actual_cost || 0),
@@ -96,4 +98,18 @@ export function overviewStatusName(cost) {
 
 function hashAPIKey(apiKey) {
   return createHash('sha256').update(String(apiKey || '').trim()).digest('hex');
+}
+
+function quotaRemaining(key) {
+  const quota = Number(key.quota || 0);
+  if (quota <= 0) return null;
+  return Math.max(0, quota - Number(key.quotaUsed || 0));
+}
+
+function formatLocalDate(date) {
+  const value = new Date(date);
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, '0');
+  const day = String(value.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }

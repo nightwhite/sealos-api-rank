@@ -17,7 +17,7 @@
         <div class="seal">览</div>
         <p class="eyebrow">SEALOS API</p>
         <h1>我的修行总览</h1>
-        <p class="muted">查看今日用量和最近调用记录。Key 只会保存在当前浏览器。</p>
+        <p class="muted">查看今日用量和今日调用记录。Key 只会保存在当前浏览器。</p>
         <div class="key-form">
           <input id="overviewApiKey" type="password" placeholder="输入你的 API Key" autocomplete="off" />
           <button id="overviewLoadButton">查看总览</button>
@@ -30,30 +30,31 @@
           <div>
             <p class="eyebrow">SEALOS API</p>
             <h1>我的修行总览</h1>
-            <p class="muted"><span>今日用量与最近调用记录。</span><span id="overviewRefreshTime" class="refresh-hint"></span></p>
+            <p class="muted"><span>今日用量与今日调用记录。</span><span id="overviewRefreshTime" class="refresh-hint"></span></p>
           </div>
           <div class="mountain-art" aria-hidden="true">
             <span class="vertical-banner">云卷</span>
             <span class="mountain-layer layer-one"></span>
             <span class="mountain-layer layer-two"></span>
           </div>
+          <button id="overviewRefreshButton" class="refresh-button">手动刷新</button>
         </header>
 
         <section class="overview-cards">
           <article><small>今日消耗</small><b id="todayCost">$0.00</b></article>
           <article><small>请求次数</small><b id="todayRequests">0</b></article>
-          <article><small>当前 Key</small><b id="activeKeyCount">1</b></article>
+          <article><small>总额度</small><b id="totalQuota">-</b></article>
           <article><small>今日状态</small><b id="todayStatus">-</b></article>
         </section>
 
         <section class="panel">
           <h2>当前密钥</h2>
-          <div class="overview-key-head"><span>Key</span><span>状态</span><span>今日消耗</span><span>请求次数</span></div>
+          <div class="overview-key-head"><span>Key</span><span>总额度</span><span>今日消耗</span><span>请求次数</span></div>
           <div id="overviewKeys" class="overview-key-list"></div>
         </section>
 
         <section class="panel">
-          <h2>调用记录</h2>
+          <h2>今日调用记录</h2>
           <div class="overview-record-head"><span>时间</span><span>密钥</span><span>模型</span><span>消耗</span><span>耗时</span></div>
           <div id="overviewRecords"></div>
           <div class="pager"><button id="prevRecords">上一页</button><span id="overviewPageInfo">1 / 1</span><button id="nextRecords">下一页</button></div>

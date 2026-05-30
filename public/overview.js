@@ -7,6 +7,13 @@ export function formatMoney(value) {
   return `$${Number(value || 0).toFixed(2)}`;
 }
 
+export function formatQuota(value) {
+  if (value === null || value === undefined || value === '') return '-';
+  const quota = Number(value || 0);
+  if (quota <= 0) return '不限额度';
+  return formatMoney(quota);
+}
+
 export function formatDuration(value) {
   const ms = Number(value || 0);
   if (ms >= 1000) return `${(ms / 1000).toFixed(1)}s`;
@@ -16,6 +23,10 @@ export function formatDuration(value) {
 export function normalizePage(value) {
   const page = Number.parseInt(value || '1', 10);
   return Number.isFinite(page) && page > 0 ? page : 1;
+}
+
+export function loadingRecordsMarkup() {
+  return '<div class="overview-empty">调用记录加载中...</div>';
 }
 
 function escapeHtml(value) {
@@ -41,6 +52,7 @@ async function postJson(url, body) {
 async function loadOverview() {
   const apiKeyInput = document.querySelector('#overviewApiKey');
   const apiKey = String(apiKeyInput.value || '').trim();
+  const refreshButton = document.querySelector('#overviewRefreshButton');
   if (!apiKey) {
     document.querySelector('#overviewError').textContent = '请先输入 API Key';
     return;
@@ -48,22 +60,33 @@ async function loadOverview() {
   localStorage.setItem(storageKey, apiKey);
   document.querySelector('#overviewError').textContent = '';
   document.querySelector('#overviewLoadButton').disabled = true;
+  if (refreshButton) refreshButton.disabled = true;
   try {
     const overview = await postJson('/api/overview', { apiKey });
     renderOverview(overview);
     currentPage = 1;
-    await loadRecords();
+    showRecordsLoading();
+    loadRecords();
   } catch (error) {
     document.querySelector('#overviewError').textContent = error.message;
   } finally {
     document.querySelector('#overviewLoadButton').disabled = false;
+    if (refreshButton) refreshButton.disabled = false;
   }
 }
 
 async function loadRecords() {
   const apiKey = String(document.querySelector('#overviewApiKey').value || '').trim();
-  const records = await postJson('/api/overview/records', { apiKey, page: currentPage, pageSize });
-  renderRecords(records);
+  try {
+    const records = await postJson('/api/overview/records', { apiKey, page: currentPage, pageSize });
+    renderRecords(records);
+  } catch (error) {
+    document.querySelector('#overviewRecords').innerHTML = `<div class="overview-empty">${escapeHtml(error.message)}</div>`;
+  }
+}
+
+function showRecordsLoading() {
+  document.querySelector('#overviewRecords').innerHTML = loadingRecordsMarkup();
 }
 
 function renderOverview(payload) {
@@ -72,12 +95,12 @@ function renderOverview(payload) {
   document.querySelector('#overviewRefreshTime').textContent = payload.refreshedAt ? `上次刷新 ${formatTime(payload.refreshedAt)}` : '';
   document.querySelector('#todayCost').textContent = formatMoney(payload.summary?.todayCost);
   document.querySelector('#todayRequests').textContent = String(payload.summary?.todayRequests || 0);
-  document.querySelector('#activeKeyCount').textContent = String(payload.summary?.activeKeyCount || 0);
+  document.querySelector('#totalQuota').textContent = formatQuota(payload.summary?.quota);
   document.querySelector('#todayStatus').textContent = payload.summary?.statusName || '-';
   document.querySelector('#overviewKeys').innerHTML = (payload.keys || []).map((key) => `
     <div class="overview-key-row">
       <span><b>${escapeHtml(key.name)}</b><small>${escapeHtml(key.maskedKey)}</small></span>
-      <span>${key.status === 'active' ? '启用中' : '不可用'}</span>
+      <span>${formatQuota(key.quota)}</span>
       <b>${formatMoney(key.todayCost)}</b>
       <span>${Number(key.todayRequests || 0)} 次</span>
     </div>
@@ -105,6 +128,7 @@ if (hasDocument) {
   const input = document.querySelector('#overviewApiKey');
   input.value = String(localStorage.getItem(storageKey) || '').trim();
   document.querySelector('#overviewLoadButton').addEventListener('click', () => loadOverview());
+  document.querySelector('#overviewRefreshButton').addEventListener('click', () => loadOverview());
   input.addEventListener('keydown', (event) => {
     if (event.key === 'Enter') loadOverview();
   });

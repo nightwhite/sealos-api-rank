@@ -52,6 +52,7 @@ export function usageMapFromStats(stats, period) {
 function toRankRow(key, usage = {}, rules, visible = false) {
   const actualCost = Number(usage.actualCost || 0);
   const realmCost = Number(usage.realmCost ?? actualCost);
+  const requests = Number(usage.requests || 0);
   const tokens = Number(usage.tokens || 0);
   const rankRule = resolveRankRule(realmCost, rules);
   return {
@@ -61,6 +62,7 @@ function toRankRow(key, usage = {}, rules, visible = false) {
     maskedKey: maskApiKey(key.key),
     actualCost,
     realmCost,
+    requests,
     tokens,
     rankName: rankRule.name,
     rankColor: rankRule.color,

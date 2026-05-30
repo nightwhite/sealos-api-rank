@@ -14,13 +14,28 @@ function createFixture() {
       for (const key of keys) storedKeys.set(key.keyHash, { ...key, id: String(key.id), userId: String(key.userId) });
     }),
     findAPIKeyByHash: vi.fn((keyHash) => storedKeys.get(keyHash) || null),
+    getRankSnapshot: vi.fn(() => ({
+      period: 'daily',
+      refreshedAt: '2026-05-31T11:55:00.000Z',
+      rows: [
+        {
+          keyId: '7',
+          keyName: '金鳞主钥',
+          maskedKey: 'sk-alpha••••1111',
+          actualCost: 2.18,
+          requests: 98,
+          tokens: 1234,
+          rankName: '初燃灵火',
+        },
+      ],
+    })),
   };
   const client = {
     listUsers: vi.fn(async () => ({ items: [{ id: 10 }, { id: 20 }] })),
     listUserAPIKeys: vi.fn(async (userId) => {
       if (userId === 10) return [
-        { id: 7, name: '金鳞主钥', key: 'sk-alpha-secret-1111', status: 'active' },
-        { id: 8, name: '炼器备用', key: 'sk-beta-secret-2222', status: 'active' },
+          { id: 7, name: '金鳞主钥', key: 'sk-alpha-secret-1111', status: 'active', quota: 500, quota_used: 128.5 },
+          { id: 8, name: '炼器备用', key: 'sk-beta-secret-2222', status: 'active', quota: 0, quota_used: 0 },
       ];
       return [{ id: 9, name: 'Other', key: 'sk-other-secret-9999', status: 'active' }];
     }),
@@ -52,32 +67,51 @@ describe('overviewStatusName', () => {
 describe('createOverviewService', () => {
   it('returns overview only for the submitted API key', async () => {
     const { service, client, db } = createFixture();
+    db.replaceAPIKeys([{ id: 7, userId: 10, keyHash: hashKey('sk-alpha-secret-1111'), name: '金鳞主钥', maskedKey: 'sk-alpha••••1111', status: 'active', quota: 500, quotaUsed: 128.5 }]);
 
     const result = await service.getOverview({ apiKey: 'sk-alpha-secret-1111' });
 
-    expect(db.replaceAPIKeys).toHaveBeenCalled();
-    expect(db.findAPIKeyByHash).toHaveBeenCalledWith(hashKey('sk-alpha-secret-1111'));
-    expect(client.getAdminUsageStats).toHaveBeenCalledWith({ api_key_id: 7, period: 'today', timezone: 'Asia/Shanghai' });
-    expect(client.getAdminUsageStats).not.toHaveBeenCalledWith({ user_id: 10, period: 'today', timezone: 'Asia/Shanghai' });
-    expect(result.summary).toEqual({ todayCost: 2.18, todayRequests: 98, activeKeyCount: 1, statusName: '初燃灵火' });
+    expect(client.getAdminUsageStats).not.toHaveBeenCalled();
+    expect(client.listUsers).not.toHaveBeenCalled();
+    expect(result.summary).toEqual({ todayCost: 2.18, todayRequests: 98, activeKeyCount: 1, quota: 500, quotaUsed: 128.5, quotaRemaining: 371.5, statusName: '初燃灵火' });
     expect(result.keys).toEqual([
-      expect.objectContaining({ id: '7', name: '金鳞主钥', status: 'active', todayCost: 2.18, todayRequests: 98 }),
+      expect.objectContaining({ id: '7', name: '金鳞主钥', status: 'active', todayCost: 2.18, todayRequests: 98, quota: 500, quotaUsed: 128.5, quotaRemaining: 371.5 }),
     ]);
+    expect(result.refreshedAt).toBe('2026-05-31T11:55:00.000Z');
   });
 
   it('rejects disabled API keys', async () => {
-    const { service, client } = createFixture();
-    client.listUserAPIKeys.mockImplementation(async () => [{ id: 7, name: 'Disabled', key: 'sk-disabled-secret-1111', status: 'disabled' }]);
+    const { service, db } = createFixture();
+    db.replaceAPIKeys([{ id: 7, userId: 10, keyHash: hashKey('sk-disabled-secret-1111'), name: 'Disabled', maskedKey: 'sk-disabled••••1111', status: 'disabled' }]);
 
     await expect(service.getOverview({ apiKey: 'sk-disabled-secret-1111' })).rejects.toThrow('这个 API Key 当前不可用');
   });
 
+  it('waits for the daily snapshot before opening overview', async () => {
+    const { service, db } = createFixture();
+    db.replaceAPIKeys([{ id: 7, userId: 10, keyHash: hashKey('sk-alpha-secret-1111'), name: '金鳞主钥', maskedKey: 'sk-alpha••••1111', status: 'active' }]);
+    db.getRankSnapshot.mockReturnValueOnce({ period: 'daily', refreshedAt: null, rows: [] });
+
+    await expect(service.getOverview({ apiKey: 'sk-alpha-secret-1111' })).rejects.toThrow('请等待榜单刷新后再查看');
+  });
+
   it('returns paginated records only for the submitted API key', async () => {
-    const { service, client } = createFixture();
+    const { service, client, db } = createFixture();
+    db.replaceAPIKeys([{ id: 7, userId: 10, keyHash: hashKey('sk-alpha-secret-1111'), name: '金鳞主钥', maskedKey: 'sk-alpha••••1111', status: 'active' }]);
 
     const result = await service.getRecords({ apiKey: 'sk-alpha-secret-1111', page: 1, pageSize: 20 });
 
-    expect(client.listAdminUsage).toHaveBeenCalledWith({ api_key_id: 7, page: 1, page_size: 20, sort_by: 'created_at', sort_order: 'desc', timezone: 'Asia/Shanghai' });
+    expect(client.listAdminUsage).toHaveBeenCalledWith({
+      api_key_id: 7,
+      page: 1,
+      page_size: 20,
+      sort_by: 'created_at',
+      sort_order: 'desc',
+      timezone: 'Asia/Shanghai',
+      start_date: '2026-05-31',
+      end_date: '2026-05-31',
+    });
+    expect(client.listUsers).not.toHaveBeenCalled();
     expect(result).toEqual({
       page: 1,
       pageSize: 20,

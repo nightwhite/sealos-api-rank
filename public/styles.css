@@ -149,6 +149,17 @@ h2 { margin: 0; font-size: 26px; letter-spacing: -.04em; }
 .period-tabs { display: flex; gap: 10px; padding: 6px; border-radius: 999px; background: rgba(255,255,255,.34); border: 1px solid #d8c6a6; }
 .period-tabs button { border-radius: 999px; background: transparent; color: #756852; box-shadow: none; }
 .period-tabs button.active { background: #486b52; color: #f8efd8; }
+.refresh-button {
+  justify-self: end;
+  align-self: end;
+  border: 1px solid rgba(126, 89, 36, 0.26);
+  border-radius: 999px;
+  background: rgba(255, 248, 224, 0.72);
+  color: #4b2f12;
+  padding: 12px 18px;
+  font-weight: 900;
+}
+.refresh-button:disabled { opacity: .5; cursor: wait; }
 .summary-grid { display: grid; grid-template-columns: 1fr 150px; gap: 16px; margin-bottom: 20px; }
 .realm-card, .rank-number-card {
   position: relative;
