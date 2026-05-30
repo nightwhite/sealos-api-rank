@@ -102,17 +102,17 @@ describe('createApp', () => {
   });
 
 
-  it('returns user overview for cached API key owner', async () => {
+  it('returns user overview for submitted API key', async () => {
     const { app } = createTestApp();
 
     const response = await request(app).post('/api/overview').send({ apiKey: 'sk-alpha-secret-1111' });
 
     expect(response.status, response.body.message).toBe(200);
-    expect(response.body.summary).toMatchObject({ todayCost: 3.82, todayRequests: 186 });
+    expect(response.body.summary).toMatchObject({ todayCost: 2.18, todayRequests: 98, activeKeyCount: 1 });
     expect(response.body.keys[0]).toMatchObject({ name: 'Alpha', todayCost: 2.18, todayRequests: 98 });
   });
 
-  it('returns paginated user overview records', async () => {
+  it('returns paginated submitted API key records', async () => {
     const { app } = createTestApp();
 
     const response = await request(app).post('/api/overview/records').send({ apiKey: 'sk-alpha-secret-1111', page: 1, pageSize: 20 });

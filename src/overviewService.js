@@ -39,34 +39,25 @@ export function createOverviewService({ client, db, now = () => new Date() }) {
     return key;
   }
 
-  async function loadOwnerKeys(userId) {
-    const keys = await client.listUserAPIKeys(Number(userId));
-    return keys.map((key) => ({ ...key, userId })).filter((key) => key.status === 'active');
-  }
-
   return {
     async getOverview({ apiKey }) {
       const ownerKey = await findOwner(apiKey);
-      const ownerKeys = await loadOwnerKeys(ownerKey.userId);
-      const summaryStats = await client.getAdminUsageStats({ user_id: Number(ownerKey.userId), period: 'today', timezone });
-      const keyRows = await Promise.all(ownerKeys.map(async (key) => {
-        const stats = await client.getAdminUsageStats({ api_key_id: Number(key.id), period: 'today', timezone });
-        return {
-          id: String(key.id),
-          name: key.name || `Key #${key.id}`,
-          maskedKey: maskApiKey(key.key),
-          status: key.status,
-          todayCost: Number(stats.total_actual_cost || 0),
-          todayRequests: Number(stats.total_requests || 0),
-        };
-      }));
+      const summaryStats = await client.getAdminUsageStats({ api_key_id: Number(ownerKey.id), period: 'today', timezone });
+      const keyRows = [{
+        id: String(ownerKey.id),
+        name: ownerKey.name || `Key #${ownerKey.id}`,
+        maskedKey: ownerKey.maskedKey,
+        status: ownerKey.status,
+        todayCost: Number(summaryStats.total_actual_cost || 0),
+        todayRequests: Number(summaryStats.total_requests || 0),
+      }];
       return {
         refreshedAt: now().toISOString(),
         user: { id: String(ownerKey.userId) },
         summary: {
           todayCost: Number(summaryStats.total_actual_cost || 0),
           todayRequests: Number(summaryStats.total_requests || 0),
-          activeKeyCount: ownerKeys.length,
+          activeKeyCount: 1,
           statusName: overviewStatusName(Number(summaryStats.total_actual_cost || 0)),
         },
         keys: keyRows,
@@ -75,20 +66,17 @@ export function createOverviewService({ client, db, now = () => new Date() }) {
 
     async getRecords({ apiKey, page = 1, pageSize = 20 }) {
       const ownerKey = await findOwner(apiKey);
-      const ownerKeys = await loadOwnerKeys(ownerKey.userId);
-      const keyById = new Map(ownerKeys.map((key) => [String(key.id), key]));
-      const result = await client.listAdminUsage({ user_id: Number(ownerKey.userId), page, page_size: pageSize, sort_by: 'created_at', sort_order: 'desc', timezone });
+      const result = await client.listAdminUsage({ api_key_id: Number(ownerKey.id), page, page_size: pageSize, sort_by: 'created_at', sort_order: 'desc', timezone });
       return {
         page: Number(result.page || page),
         pageSize: Number(result.page_size || pageSize),
         total: Number(result.total || 0),
         items: (result.items || []).map((item) => {
-          const key = keyById.get(String(item.api_key_id));
           return {
             id: String(item.id),
             createdAt: item.created_at,
-            keyName: key?.name || `Key #${item.api_key_id}`,
-            maskedKey: key?.key ? maskApiKey(key.key) : '',
+            keyName: ownerKey.name || `Key #${ownerKey.id}`,
+            maskedKey: ownerKey.maskedKey,
             model: item.model || '-',
             requestType: item.request_type || '',
             cost: Number(item.actual_cost || 0),

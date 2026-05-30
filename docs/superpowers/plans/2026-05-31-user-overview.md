@@ -2,7 +2,7 @@
 
 > **面向 AI 代理的工作者：** 必需子技能：使用 superpowers:subagent-driven-development（推荐）或 superpowers:executing-plans 逐任务实现此计划。步骤使用复选框（`- [ ]`）语法来跟踪进度。
 
-**目标：** 新增普通用户「我的总览」页面，复用排行榜缓存的 API Key，展示该 Key 所属用户的今日用量、密钥概览和分页调用记录，不展示 token 消耗。
+**目标：** 新增普通用户「我的总览」页面，复用排行榜缓存的 API Key，展示当前输入 API Key 的今日用量、密钥概览和分页调用记录，不展示 token 消耗。
 
 **架构：** 后端增加一个专注的 `overviewService`，负责同步 Key 归属、查询 Sub2API 管理用量接口并转换成用户视角数据。前端新增 `/overview.html` 与 `/overview.js`，复用现有 CSS、中国风视觉和 `localStorage` 缓存键。数据库仅在 `api_keys` 表补充 `user_id`，不保存用户输入的原始 API Key。
 
@@ -22,7 +22,7 @@
   - 增加 `listAdminUsage(params)`。
   - 增加 `getAdminUsageStats(params)`。
 - 创建：`/Users/night/Documents/code/sealos/sub2api-rank/src/overviewService.js`
-  - 用户总览业务逻辑：同步 Key、识别用户、汇总今日数据、分页调用记录。
+  - 用户总览业务逻辑：同步 Key、识别用户、查询当前 Key 今日数据、分页调用记录。
 - 修改：`/Users/night/Documents/code/sealos/sub2api-rank/src/server.js`
   - 注入 `overviewService`。
   - 新增 `POST /api/overview` 和 `POST /api/overview/records`。
@@ -872,10 +872,10 @@ if (hasDocument) {
       <div class="overview-cards">
         <article><small>今日消耗</small><b id="todayCost">$0.00</b></article>
         <article><small>请求次数</small><b id="todayRequests">0</b></article>
-        <article><small>活跃密钥</small><b id="activeKeyCount">0</b></article>
+        <article><small>当前 Key</small><b id="activeKeyCount">1</b></article>
         <article><small>今日状态</small><b id="todayStatus">-</b></article>
       </div>
-      <section class="panel"><h2>我的密钥</h2><div id="overviewKeys" class="overview-key-list"></div></section>
+      <section class="panel"><h2>当前密钥</h2><div id="overviewKeys" class="overview-key-list"></div></section>
       <section class="panel"><h2>调用记录</h2><div class="overview-record-head"><span>时间</span><span>密钥</span><span>模型</span><span>消耗</span><span>耗时</span></div><div id="overviewRecords"></div><div class="pager"><button id="prevRecords">上一页</button><span id="overviewPageInfo">1 / 1</span><button id="nextRecords">下一页</button></div></section>
     </section>
   </main>
@@ -1160,8 +1160,8 @@ tokens
 
 预期：
 
-- 今日消耗、请求次数、活跃密钥、今日状态有值。
-- 我的密钥列表展示 Key 名、脱敏 Key、状态、今日消耗、请求次数。
+- 今日消耗、请求次数、当前 Key、今日状态有值。
+- 当前密钥区域展示 Key 名、脱敏 Key、状态、今日消耗、请求次数。
 - 调用记录展示时间、密钥、模型、消耗、耗时。
 - 点击「下一页」只刷新记录列表，不重载整个页面。
 - 刷新页面后不需要重新输入 API Key。

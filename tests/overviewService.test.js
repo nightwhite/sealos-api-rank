@@ -50,18 +50,18 @@ describe('overviewStatusName', () => {
 });
 
 describe('createOverviewService', () => {
-  it('returns aggregate overview for the API key owner', async () => {
+  it('returns overview only for the submitted API key', async () => {
     const { service, client, db } = createFixture();
 
     const result = await service.getOverview({ apiKey: 'sk-alpha-secret-1111' });
 
     expect(db.replaceAPIKeys).toHaveBeenCalled();
     expect(db.findAPIKeyByHash).toHaveBeenCalledWith(hashKey('sk-alpha-secret-1111'));
-    expect(client.getAdminUsageStats).toHaveBeenCalledWith({ user_id: 10, period: 'today', timezone: 'Asia/Shanghai' });
-    expect(result.summary).toEqual({ todayCost: 3.82, todayRequests: 186, activeKeyCount: 2, statusName: '初燃灵火' });
+    expect(client.getAdminUsageStats).toHaveBeenCalledWith({ api_key_id: 7, period: 'today', timezone: 'Asia/Shanghai' });
+    expect(client.getAdminUsageStats).not.toHaveBeenCalledWith({ user_id: 10, period: 'today', timezone: 'Asia/Shanghai' });
+    expect(result.summary).toEqual({ todayCost: 2.18, todayRequests: 98, activeKeyCount: 1, statusName: '初燃灵火' });
     expect(result.keys).toEqual([
       expect.objectContaining({ id: '7', name: '金鳞主钥', status: 'active', todayCost: 2.18, todayRequests: 98 }),
-      expect.objectContaining({ id: '8', name: '炼器备用', status: 'active', todayCost: 1.64, todayRequests: 88 }),
     ]);
   });
 
@@ -72,12 +72,12 @@ describe('createOverviewService', () => {
     await expect(service.getOverview({ apiKey: 'sk-disabled-secret-1111' })).rejects.toThrow('这个 API Key 当前不可用');
   });
 
-  it('returns paginated records for the API key owner', async () => {
+  it('returns paginated records only for the submitted API key', async () => {
     const { service, client } = createFixture();
 
     const result = await service.getRecords({ apiKey: 'sk-alpha-secret-1111', page: 1, pageSize: 20 });
 
-    expect(client.listAdminUsage).toHaveBeenCalledWith({ user_id: 10, page: 1, page_size: 20, sort_by: 'created_at', sort_order: 'desc', timezone: 'Asia/Shanghai' });
+    expect(client.listAdminUsage).toHaveBeenCalledWith({ api_key_id: 7, page: 1, page_size: 20, sort_by: 'created_at', sort_order: 'desc', timezone: 'Asia/Shanghai' });
     expect(result).toEqual({
       page: 1,
       pageSize: 20,
