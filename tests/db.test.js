@@ -77,21 +77,51 @@ describe('createDatabase', () => {
     const db = createDatabase(tempDbPath());
 
     db.replaceAPIKeys([
-      { id: 1, keyHash: 'hash-alpha', name: 'Alpha', maskedKey: 'sk-alpha••••1111', status: 'active' },
-      { id: 2, keyHash: 'hash-beta', name: 'Beta', maskedKey: 'sk-beta••••2222', status: 'disabled' },
+      { id: 1, userId: 10, keyHash: 'hash-alpha', name: 'Alpha', maskedKey: 'sk-alpha••••1111', status: 'active' },
+      { id: 2, userId: 20, keyHash: 'hash-beta', name: 'Beta', maskedKey: 'sk-beta••••2222', status: 'disabled' },
     ]);
 
     expect(db.findAPIKeyByHash('hash-alpha')).toMatchObject({
       id: '1',
+      userId: '10',
       keyHash: 'hash-alpha',
       name: 'Alpha',
       maskedKey: 'sk-alpha••••1111',
       status: 'active',
     });
     expect(db.listAPIKeys()).toEqual([
-      expect.objectContaining({ id: '1', name: 'Alpha', status: 'active' }),
-      expect.objectContaining({ id: '2', name: 'Beta', status: 'disabled' }),
+      expect.objectContaining({ id: '1', userId: '10', name: 'Alpha', status: 'active' }),
+      expect.objectContaining({ id: '2', userId: '20', name: 'Beta', status: 'disabled' }),
     ]);
+    db.close();
+  });
+
+
+  it('migrates api key cache with user ownership', () => {
+    const databasePath = tempDbPath();
+    const sqlite = new Database(databasePath);
+    sqlite.exec(`
+      CREATE TABLE api_keys (
+        id TEXT PRIMARY KEY,
+        key_hash TEXT NOT NULL UNIQUE,
+        name TEXT NOT NULL,
+        masked_key TEXT NOT NULL,
+        status TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+    `);
+    sqlite.prepare(`
+      INSERT INTO api_keys (id, key_hash, name, masked_key, status, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run('1', 'hash-alpha', 'Alpha', 'sk-alpha••••1111', 'active', '2026-05-31T00:00:00.000Z');
+    sqlite.close();
+
+    const db = createDatabase(databasePath);
+
+    db.replaceAPIKeys([
+      { id: 1, userId: 10, keyHash: 'hash-alpha', name: 'Alpha', maskedKey: 'sk-alpha••••1111', status: 'active' },
+    ]);
+    expect(db.findAPIKeyByHash('hash-alpha')).toMatchObject({ userId: '10' });
     db.close();
   });
 

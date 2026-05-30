@@ -63,9 +63,10 @@ export function createDatabase(databasePath) {
       const now = new Date().toISOString();
       const replace = sqlite.transaction(() => {
         const upsert = sqlite.prepare(`
-          INSERT INTO api_keys (id, key_hash, name, masked_key, status, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?)
+          INSERT INTO api_keys (id, user_id, key_hash, name, masked_key, status, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?)
           ON CONFLICT(id) DO UPDATE SET
+            user_id = excluded.user_id,
             key_hash = excluded.key_hash,
             name = excluded.name,
             masked_key = excluded.masked_key,
@@ -73,17 +74,17 @@ export function createDatabase(databasePath) {
             updated_at = excluded.updated_at
         `);
         for (const key of keys) {
-          upsert.run(String(key.id), key.keyHash, key.name, key.maskedKey, key.status, now);
+          upsert.run(String(key.id), String(key.userId || ''), key.keyHash, key.name, key.maskedKey, key.status, now);
         }
       });
       replace();
     },
     findAPIKeyByHash(keyHash) {
-      const row = sqlite.prepare('SELECT id, key_hash, name, masked_key, status, updated_at FROM api_keys WHERE key_hash = ?').get(keyHash);
+      const row = sqlite.prepare('SELECT id, user_id, key_hash, name, masked_key, status, updated_at FROM api_keys WHERE key_hash = ?').get(keyHash);
       return row ? toAPIKey(row) : null;
     },
     listAPIKeys() {
-      return sqlite.prepare('SELECT id, key_hash, name, masked_key, status, updated_at FROM api_keys ORDER BY id ASC').all().map(toAPIKey);
+      return sqlite.prepare('SELECT id, user_id, key_hash, name, masked_key, status, updated_at FROM api_keys ORDER BY id ASC').all().map(toAPIKey);
     },
     replaceRankSnapshot(period, snapshot) {
       const normalizedPeriod = normalizePeriod(period);
@@ -175,6 +176,7 @@ function migrate(sqlite) {
     );
     CREATE TABLE IF NOT EXISTS api_keys (
       id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL DEFAULT '',
       key_hash TEXT NOT NULL UNIQUE,
       name TEXT NOT NULL,
       masked_key TEXT NOT NULL,
@@ -205,6 +207,7 @@ function migrate(sqlite) {
     );
   `);
   ensureColumn(sqlite, 'rank_rules', 'period', "TEXT NOT NULL DEFAULT 'daily'");
+  ensureColumn(sqlite, 'api_keys', 'user_id', "TEXT NOT NULL DEFAULT ''");
   sqlite.prepare("UPDATE rank_rules SET period = 'daily' WHERE period IS NULL OR period = ''").run();
 }
 
@@ -254,6 +257,7 @@ function normalizePeriod(period) {
 function toAPIKey(row) {
   return {
     id: row.id,
+    userId: row.user_id,
     keyHash: row.key_hash,
     name: row.name,
     maskedKey: row.masked_key,
