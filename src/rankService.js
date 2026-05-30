@@ -112,7 +112,10 @@ export function periodDateRange(period, value) {
 
 async function listAllKeys(client) {
   const users = await client.listUsers();
-  const keyGroups = await Promise.all((users.items || []).map((user) => client.listUserAPIKeys(user.id)));
+  const keyGroups = await Promise.all((users.items || []).map(async (user) => {
+    const keys = await client.listUserAPIKeys(user.id);
+    return keys.map((key) => ({ ...key, userId: user.id }));
+  }));
   return keyGroups.flat();
 }
 
