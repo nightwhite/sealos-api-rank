@@ -9,6 +9,15 @@ export function createSub2APIClient({ baseUrl, adminKey, fetchImpl = fetch }) {
     return payload && typeof payload === 'object' && payload.code === 0 && 'data' in payload ? payload.data : payload;
   }
 
+  function buildQuery(params = {}) {
+    const search = new URLSearchParams();
+    for (const [key, value] of Object.entries(params)) {
+      if (value === undefined || value === null || value === '') continue;
+      search.set(key, String(value));
+    }
+    return search.toString();
+  }
+
   function adminHeaders(extra = {}) {
     return {
       ...extra,
@@ -40,6 +49,20 @@ export function createSub2APIClient({ baseUrl, adminKey, fetchImpl = fetch }) {
         headers: adminHeaders(),
       });
       return data.items || [];
+    },
+    async listAdminUsage(params = {}) {
+      const query = buildQuery(params);
+      return requestJson(`${baseUrl}/admin/usage${query ? `?${query}` : ''}`, {
+        method: 'GET',
+        headers: adminHeaders(),
+      });
+    },
+    async getAdminUsageStats(params = {}) {
+      const query = buildQuery(params);
+      return requestJson(`${baseUrl}/admin/usage/stats${query ? `?${query}` : ''}`, {
+        method: 'GET',
+        headers: adminHeaders(),
+      });
     },
     async getBatchAPIKeyUsage(apiKeyIds) {
       return requestJson(`${baseUrl}/admin/dashboard/api-keys-usage`, {

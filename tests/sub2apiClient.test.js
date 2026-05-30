@@ -37,4 +37,37 @@ describe('createSub2APIClient', () => {
     await expect(client.listUserAPIKeys(10)).resolves.toEqual([{ id: 7, name: 'Prod', key: 'sk-prod-secret-7777', status: 'active' }]);
     await expect(client.getBatchAPIKeyUsage([7])).resolves.toEqual({ stats: { 7: { api_key_id: 7, today_actual_cost: 8, total_actual_cost: 99 } } });
   });
+
+  it('loads admin usage logs with pagination and filters', async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({
+      code: 0,
+      data: { items: [{ id: 9001, api_key_id: 7, model: 'gpt-4.1' }], total: 1, page: 2, page_size: 20 },
+    }), { status: 200 }));
+    const client = createSub2APIClient({ baseUrl: 'https://sub.example.com/api/v1', adminKey: 'admin-key', fetchImpl: fetchMock });
+
+    await expect(client.listAdminUsage({ user_id: 10, page: 2, page_size: 20, sort_by: 'created_at', sort_order: 'desc', timezone: 'Asia/Shanghai' }))
+      .resolves.toEqual({ items: [{ id: 9001, api_key_id: 7, model: 'gpt-4.1' }], total: 1, page: 2, page_size: 20 });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://sub.example.com/api/v1/admin/usage?user_id=10&page=2&page_size=20&sort_by=created_at&sort_order=desc&timezone=Asia%2FShanghai',
+      expect.objectContaining({ headers: expect.objectContaining({ 'x-api-key': 'admin-key' }) }),
+    );
+  });
+
+  it('loads admin usage stats with filters', async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({
+      code: 0,
+      data: { total_requests: 8, total_actual_cost: 1.23 },
+    }), { status: 200 }));
+    const client = createSub2APIClient({ baseUrl: 'https://sub.example.com/api/v1', adminKey: 'admin-key', fetchImpl: fetchMock });
+
+    await expect(client.getAdminUsageStats({ user_id: 10, period: 'today', timezone: 'Asia/Shanghai' }))
+      .resolves.toEqual({ total_requests: 8, total_actual_cost: 1.23 });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://sub.example.com/api/v1/admin/usage/stats?user_id=10&period=today&timezone=Asia%2FShanghai',
+      expect.objectContaining({ headers: expect.objectContaining({ 'x-api-key': 'admin-key' }) }),
+    );
+  });
+
 });
