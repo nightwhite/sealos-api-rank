@@ -9,11 +9,12 @@ function createTestApp() {
     replaceVisibleKeys: vi.fn(),
     listRankRules: vi.fn(() => [{ minCost: 0, name: '凡人试炼', color: '#94a3b8' }]),
     replaceRankRules: vi.fn(),
+    replaceAPIKeys: vi.fn(),
     listAPIKeys: vi.fn(() => [
       { id: '1', name: 'Alpha', maskedKey: 'sk-alpha••••1111', status: 'active' },
       { id: '2', name: 'Beta', maskedKey: 'sk-beta••••2222', status: 'disabled' },
     ]),
-    findAPIKeyByHash: vi.fn(() => ({ id: '1', name: 'Alpha', status: 'active' })),
+    findAPIKeyByHash: vi.fn(() => ({ id: '1', userId: '10', name: 'Alpha', status: 'active' })),
     getRankSnapshot: vi.fn(() => ({
       period: 'daily',
       refreshedAt: '2026-05-28T04:00:00.000Z',
@@ -42,6 +43,16 @@ function createTestApp() {
   const client = {
     listUsers: vi.fn(async () => ({ items: [{ id: 10 }] })),
     listUserAPIKeys: vi.fn(async () => [{ id: 1, name: 'Alpha', key: 'sk-alpha-secret-1111', status: 'active' }]),
+    getAdminUsageStats: vi.fn(async (params) => {
+      if (params.user_id === 10) return { total_actual_cost: 3.82, total_requests: 186 };
+      return { total_actual_cost: 2.18, total_requests: 98 };
+    }),
+    listAdminUsage: vi.fn(async () => ({
+      page: 1,
+      page_size: 20,
+      total: 1,
+      items: [{ id: 9001, api_key_id: 1, model: 'gpt-4.1', actual_cost: 0.042, duration_ms: 1300, request_type: 'stream', created_at: '2026-05-31T11:58:00.000Z' }],
+    })),
     getUsageStats: vi.fn(async () => ({ total_actual_cost: 10, total_tokens: 99 })),
   };
   const app = createApp({
@@ -88,6 +99,36 @@ describe('createApp', () => {
 
     scheduler.stop();
     vi.useRealTimers();
+  });
+
+
+  it('returns user overview for cached API key owner', async () => {
+    const { app } = createTestApp();
+
+    const response = await request(app).post('/api/overview').send({ apiKey: 'sk-alpha-secret-1111' });
+
+    expect(response.status, response.body.message).toBe(200);
+    expect(response.body.summary).toMatchObject({ todayCost: 3.82, todayRequests: 186 });
+    expect(response.body.keys[0]).toMatchObject({ name: 'Alpha', todayCost: 2.18, todayRequests: 98 });
+  });
+
+  it('returns paginated user overview records', async () => {
+    const { app } = createTestApp();
+
+    const response = await request(app).post('/api/overview/records').send({ apiKey: 'sk-alpha-secret-1111', page: 1, pageSize: 20 });
+
+    expect(response.status, response.body.message).toBe(200);
+    expect(response.body).toMatchObject({ page: 1, pageSize: 20, total: 1 });
+    expect(response.body.items[0]).toMatchObject({ keyName: 'Alpha', model: 'gpt-4.1', cost: 0.042 });
+  });
+
+  it('validates overview API key input', async () => {
+    const { app } = createTestApp();
+
+    const response = await request(app).post('/api/overview').send({ apiKey: '' });
+
+    expect(response.status).toBe(400);
+    expect(response.body.message).toBe('请先输入 API Key');
   });
 
   it('logs admin in and saves visible keys', async () => {

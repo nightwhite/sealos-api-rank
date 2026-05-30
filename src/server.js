@@ -7,6 +7,7 @@ import { createDatabase } from './db.js';
 import { createSub2APIClient } from './sub2apiClient.js';
 import { createRankService } from './rankService.js';
 import { createAdminAuth } from './adminAuth.js';
+import { createOverviewService } from './overviewService.js';
 
 const currentDir = dirname(fileURLToPath(import.meta.url));
 const publicDir = join(currentDir, '..', 'public');
@@ -15,6 +16,7 @@ export function createApp({ config, db, client, now = () => new Date() }) {
   const app = express();
   const adminAuth = createAdminAuth({ adminPassword: config.adminPassword, db, now });
   const rankService = createRankService({ client, db, now });
+  const overviewService = createOverviewService({ client, db, now });
 
   app.use(express.json({ limit: '64kb' }));
   app.use(cookieParser());
@@ -31,6 +33,27 @@ export function createApp({ config, db, client, now = () => new Date() }) {
       res.json(await rankService.getRankings({ apiKey, period }));
     } catch (error) {
       res.status(400).json({ message: error.message || '排行榜暂时无法更新' });
+    }
+  });
+
+
+  app.post('/api/overview', async (req, res) => {
+    try {
+      const apiKey = String(req.body?.apiKey || '').trim();
+      res.json(await overviewService.getOverview({ apiKey }));
+    } catch (error) {
+      res.status(400).json({ message: error.message || '总览暂时无法打开，请稍后再试' });
+    }
+  });
+
+  app.post('/api/overview/records', async (req, res) => {
+    try {
+      const apiKey = String(req.body?.apiKey || '').trim();
+      const page = Math.max(1, Number.parseInt(req.body?.page || '1', 10));
+      const pageSize = Math.min(100, Math.max(1, Number.parseInt(req.body?.pageSize || '20', 10)));
+      res.json(await overviewService.getRecords({ apiKey, page, pageSize }));
+    } catch (error) {
+      res.status(400).json({ message: error.message || '调用记录暂时无法打开，请稍后再试' });
     }
   });
 
