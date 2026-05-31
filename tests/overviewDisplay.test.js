@@ -85,4 +85,26 @@ describe('overview page structure', () => {
 
     expect(script).toMatch(/async function loadRecords\(\) \{\s+const apiKey[^;]+;\s+const requestId = \+\+recordsRequestId;\s+showRecordsLoading\(\);/);
   });
+
+  it('prevents duplicate overview requests while loading', () => {
+    const script = readFileSync('public/overview.js', 'utf8');
+
+    expect(script).toMatch(/const loadButton = document\.querySelector\('#overviewLoadButton'\);\s+if \(loadButton\?\.disabled\) return;/);
+  });
+
+  it('shows refresh errors inside the visible overview panel', () => {
+    const html = readFileSync('public/overview.html', 'utf8');
+    const script = readFileSync('public/overview.js', 'utf8');
+
+    expect(html).toContain('id="overviewContentError"');
+    expect(script).toContain("document.querySelector('#overviewContentError')");
+    expect(script).toContain('contentVisible');
+  });
+
+  it('restores records pagination controls after records load errors', () => {
+    const script = readFileSync('public/overview.js', 'utf8');
+
+    expect(script).toContain('function updateRecordsPager(');
+    expect(script).toMatch(/catch \(error\) \{[\s\S]+updateRecordsPager\(\);[\s\S]+}/);
+  });
 });

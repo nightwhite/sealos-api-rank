@@ -59,6 +59,8 @@ async function postJson(url, body) {
 }
 
 async function loadOverview() {
+  const loadButton = document.querySelector('#overviewLoadButton');
+  if (loadButton?.disabled) return;
   const apiKeyInput = document.querySelector('#overviewApiKey');
   const apiKey = String(apiKeyInput.value || '').trim();
   const refreshButton = document.querySelector('#overviewRefreshButton');
@@ -68,7 +70,8 @@ async function loadOverview() {
   }
   localStorage.setItem(storageKey, apiKey);
   document.querySelector('#overviewError').textContent = '';
-  document.querySelector('#overviewLoadButton').disabled = true;
+  document.querySelector('#overviewContentError').textContent = '';
+  loadButton.disabled = true;
   if (refreshButton) refreshButton.disabled = true;
   try {
     const overview = await postJson('/api/overview', { apiKey });
@@ -76,9 +79,10 @@ async function loadOverview() {
     currentPage = 1;
     void loadRecords();
   } catch (error) {
-    document.querySelector('#overviewError').textContent = error.message;
+    const contentVisible = !document.querySelector('#overviewContent').classList.contains('hidden');
+    document.querySelector(contentVisible ? '#overviewContentError' : '#overviewError').textContent = error.message;
   } finally {
-    document.querySelector('#overviewLoadButton').disabled = false;
+    loadButton.disabled = false;
     if (refreshButton) refreshButton.disabled = false;
   }
 }
@@ -94,6 +98,7 @@ async function loadRecords() {
   } catch (error) {
     if (requestId !== recordsRequestId) return;
     document.querySelector('#overviewRecords').innerHTML = `<div class="overview-empty">${escapeHtml(error.message)}</div>`;
+    updateRecordsPager();
   }
 }
 
@@ -133,10 +138,15 @@ function renderRecords(payload) {
       <span>${formatDuration(item.durationMs)}</span>
     </div>
   `).join('') : '<div class="overview-empty">暂无调用记录</div>';
+  updateRecordsPager(payload);
+}
+
+function updateRecordsPager(payload = {}) {
+  const page = Number(payload.page || currentPage);
   const totalPages = Math.max(1, Math.ceil(Number(payload.total || 0) / Number(payload.pageSize || pageSize)));
-  document.querySelector('#overviewPageInfo').textContent = `${payload.page} / ${totalPages}`;
-  document.querySelector('#prevRecords').disabled = payload.page <= 1;
-  document.querySelector('#nextRecords').disabled = payload.page >= totalPages;
+  document.querySelector('#overviewPageInfo').textContent = `${page} / ${totalPages}`;
+  document.querySelector('#prevRecords').disabled = page <= 1;
+  document.querySelector('#nextRecords').disabled = page >= totalPages;
 }
 
 if (hasDocument) {
