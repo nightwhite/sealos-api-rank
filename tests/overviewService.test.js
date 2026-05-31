@@ -34,8 +34,8 @@ function createFixture() {
     listUsers: vi.fn(async () => ({ items: [{ id: 10 }, { id: 20 }] })),
     listUserAPIKeys: vi.fn(async (userId) => {
       if (userId === 10) return [
-          { id: 7, name: '金鳞主钥', key: 'sk-alpha-secret-1111', status: 'active', quota: 500, quota_used: 128.5 },
-          { id: 8, name: '炼器备用', key: 'sk-beta-secret-2222', status: 'active', quota: 0, quota_used: 0 },
+          { id: 7, name: '金鳞主钥', key: 'sk-alpha-secret-1111', status: 'active', quota: 0, quota_used: 0, rate_limit_1d: 900, usage_1d: 470.72 },
+          { id: 8, name: '炼器备用', key: 'sk-beta-secret-2222', status: 'active', quota: 0, quota_used: 0, rate_limit_1d: 0, usage_1d: 0 },
       ];
       return [{ id: 9, name: 'Other', key: 'sk-other-secret-9999', status: 'active' }];
     }),
@@ -67,15 +67,15 @@ describe('overviewStatusName', () => {
 describe('createOverviewService', () => {
   it('returns overview only for the submitted API key', async () => {
     const { service, client, db } = createFixture();
-    db.replaceAPIKeys([{ id: 7, userId: 10, keyHash: hashKey('sk-alpha-secret-1111'), name: '金鳞主钥', maskedKey: 'sk-alpha••••1111', status: 'active', quota: 500, quotaUsed: 128.5 }]);
+    db.replaceAPIKeys([{ id: 7, userId: 10, keyHash: hashKey('sk-alpha-secret-1111'), name: '金鳞主钥', maskedKey: 'sk-alpha••••1111', status: 'active', quota: 0, quotaUsed: 0, rateLimit1d: 900, usage1d: 470.72 }]);
 
     const result = await service.getOverview({ apiKey: 'sk-alpha-secret-1111' });
 
     expect(client.getAdminUsageStats).not.toHaveBeenCalled();
     expect(client.listUsers).not.toHaveBeenCalled();
-    expect(result.summary).toEqual({ todayCost: 2.18, todayRequests: 98, activeKeyCount: 1, quota: 500, quotaUsed: 128.5, quotaRemaining: 371.5, statusName: '初燃灵火' });
+    expect(result.summary).toEqual({ todayCost: 2.18, todayRequests: 98, activeKeyCount: 1, quota: 0, quotaUsed: 0, quotaRemaining: null, dailyLimit: 900, dailyLimitUsed: 470.72, dailyLimitRemaining: 429.28, statusName: '初燃灵火' });
     expect(result.keys).toEqual([
-      expect.objectContaining({ id: '7', name: '金鳞主钥', status: 'active', todayCost: 2.18, todayRequests: 98, quota: 500, quotaUsed: 128.5, quotaRemaining: 371.5 }),
+      expect.objectContaining({ id: '7', name: '金鳞主钥', status: 'active', todayCost: 2.18, todayRequests: 98, dailyLimit: 900, dailyLimitUsed: 470.72, dailyLimitRemaining: 429.28 }),
     ]);
     expect(result.refreshedAt).toBe('2026-05-31T11:55:00.000Z');
   });

@@ -63,8 +63,8 @@ export function createDatabase(databasePath) {
       const now = new Date().toISOString();
       const replace = sqlite.transaction(() => {
         const upsert = sqlite.prepare(`
-          INSERT INTO api_keys (id, user_id, key_hash, name, masked_key, status, quota, quota_used, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          INSERT INTO api_keys (id, user_id, key_hash, name, masked_key, status, quota, quota_used, rate_limit_1d, usage_1d, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           ON CONFLICT(id) DO UPDATE SET
             user_id = excluded.user_id,
             key_hash = excluded.key_hash,
@@ -73,6 +73,8 @@ export function createDatabase(databasePath) {
             status = excluded.status,
             quota = excluded.quota,
             quota_used = excluded.quota_used,
+            rate_limit_1d = excluded.rate_limit_1d,
+            usage_1d = excluded.usage_1d,
             updated_at = excluded.updated_at
         `);
         for (const key of keys) {
@@ -85,6 +87,8 @@ export function createDatabase(databasePath) {
             key.status,
             Number(key.quota || 0),
             Number(key.quotaUsed || 0),
+            Number(key.rateLimit1d || 0),
+            Number(key.usage1d || 0),
             now,
           );
         }
@@ -92,11 +96,11 @@ export function createDatabase(databasePath) {
       replace();
     },
     findAPIKeyByHash(keyHash) {
-      const row = sqlite.prepare('SELECT id, user_id, key_hash, name, masked_key, status, quota, quota_used, updated_at FROM api_keys WHERE key_hash = ?').get(keyHash);
+      const row = sqlite.prepare('SELECT id, user_id, key_hash, name, masked_key, status, quota, quota_used, rate_limit_1d, usage_1d, updated_at FROM api_keys WHERE key_hash = ?').get(keyHash);
       return row ? toAPIKey(row) : null;
     },
     listAPIKeys() {
-      return sqlite.prepare('SELECT id, user_id, key_hash, name, masked_key, status, quota, quota_used, updated_at FROM api_keys ORDER BY id ASC').all().map(toAPIKey);
+      return sqlite.prepare('SELECT id, user_id, key_hash, name, masked_key, status, quota, quota_used, rate_limit_1d, usage_1d, updated_at FROM api_keys ORDER BY id ASC').all().map(toAPIKey);
     },
     replaceRankSnapshot(period, snapshot) {
       const normalizedPeriod = normalizePeriod(period);
@@ -196,6 +200,8 @@ function migrate(sqlite) {
       status TEXT NOT NULL,
       quota REAL NOT NULL DEFAULT 0,
       quota_used REAL NOT NULL DEFAULT 0,
+      rate_limit_1d REAL NOT NULL DEFAULT 0,
+      usage_1d REAL NOT NULL DEFAULT 0,
       updated_at TEXT NOT NULL
     );
     CREATE TABLE IF NOT EXISTS rank_snapshots (
@@ -226,6 +232,8 @@ function migrate(sqlite) {
   ensureColumn(sqlite, 'api_keys', 'user_id', "TEXT NOT NULL DEFAULT ''");
   ensureColumn(sqlite, 'api_keys', 'quota', 'REAL NOT NULL DEFAULT 0');
   ensureColumn(sqlite, 'api_keys', 'quota_used', 'REAL NOT NULL DEFAULT 0');
+  ensureColumn(sqlite, 'api_keys', 'rate_limit_1d', 'REAL NOT NULL DEFAULT 0');
+  ensureColumn(sqlite, 'api_keys', 'usage_1d', 'REAL NOT NULL DEFAULT 0');
   ensureColumn(sqlite, 'rank_snapshots', 'requests', "INTEGER NOT NULL DEFAULT 0");
   sqlite.prepare("UPDATE rank_rules SET period = 'daily' WHERE period IS NULL OR period = ''").run();
 }
@@ -283,6 +291,8 @@ function toAPIKey(row) {
     status: row.status,
     quota: row.quota,
     quotaUsed: row.quota_used,
+    rateLimit1d: row.rate_limit_1d,
+    usage1d: row.usage_1d,
     updatedAt: row.updated_at,
   };
 }

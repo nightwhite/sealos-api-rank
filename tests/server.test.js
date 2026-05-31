@@ -14,7 +14,7 @@ function createTestApp() {
       { id: '1', name: 'Alpha', maskedKey: 'sk-alpha••••1111', status: 'active' },
       { id: '2', name: 'Beta', maskedKey: 'sk-beta••••2222', status: 'disabled' },
     ]),
-    findAPIKeyByHash: vi.fn(() => ({ id: '1', userId: '10', name: 'Alpha', status: 'active', quota: 500, quotaUsed: 128.5 })),
+    findAPIKeyByHash: vi.fn(() => ({ id: '1', userId: '10', name: 'Alpha', status: 'active', quota: 0, quotaUsed: 0, rateLimit1d: 900, usage1d: 470.72 })),
     getRankSnapshot: vi.fn(() => ({
       period: 'daily',
       refreshedAt: '2026-05-28T04:00:00.000Z',
@@ -109,8 +109,8 @@ describe('createApp', () => {
     const response = await request(app).post('/api/overview').send({ apiKey: 'sk-alpha-secret-1111' });
 
     expect(response.status, response.body.message).toBe(200);
-    expect(response.body.summary).toMatchObject({ todayCost: 10, todayRequests: 8, activeKeyCount: 1, quota: 500, quotaUsed: 128.5, quotaRemaining: 371.5 });
-    expect(response.body.keys[0]).toMatchObject({ name: 'Alpha', todayCost: 10, todayRequests: 8, quota: 500, quotaUsed: 128.5, quotaRemaining: 371.5 });
+    expect(response.body.summary).toMatchObject({ todayCost: 10, todayRequests: 8, activeKeyCount: 1, dailyLimit: 900, dailyLimitUsed: 470.72, dailyLimitRemaining: 429.28 });
+    expect(response.body.keys[0]).toMatchObject({ name: 'Alpha', todayCost: 10, todayRequests: 8, dailyLimit: 900, dailyLimitUsed: 470.72, dailyLimitRemaining: 429.28 });
   });
 
   it('returns paginated submitted API key records', async () => {

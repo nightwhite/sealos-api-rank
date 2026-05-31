@@ -37,6 +37,9 @@ export function createOverviewService({ client, db, now = () => new Date() }) {
         quota: Number(key.quota || 0),
         quotaUsed: Number(key.quotaUsed || 0),
         quotaRemaining: quotaRemaining(key),
+        dailyLimit: Number(key.rateLimit1d || 0),
+        dailyLimitUsed: Number(key.usage1d || 0),
+        dailyLimitRemaining: dailyLimitRemaining(key),
         todayCost,
         todayRequests,
       }];
@@ -50,6 +53,9 @@ export function createOverviewService({ client, db, now = () => new Date() }) {
           quota: Number(key.quota || 0),
           quotaUsed: Number(key.quotaUsed || 0),
           quotaRemaining: quotaRemaining(key),
+          dailyLimit: Number(key.rateLimit1d || 0),
+          dailyLimitUsed: Number(key.usage1d || 0),
+          dailyLimitRemaining: dailyLimitRemaining(key),
           statusName: overviewStatusName(todayCost),
         },
         keys: keyRows,
@@ -104,6 +110,12 @@ function quotaRemaining(key) {
   const quota = Number(key.quota || 0);
   if (quota <= 0) return null;
   return Math.max(0, quota - Number(key.quotaUsed || 0));
+}
+
+function dailyLimitRemaining(key) {
+  const limit = Number(key.rateLimit1d || 0);
+  if (limit <= 0) return null;
+  return Math.max(0, limit - Number(key.usage1d || 0));
 }
 
 function formatLocalDate(date) {

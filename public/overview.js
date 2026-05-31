@@ -7,11 +7,11 @@ export function formatMoney(value) {
   return `$${Number(value || 0).toFixed(2)}`;
 }
 
-export function formatQuota(value) {
+export function formatKeyLimit(value) {
   if (value === null || value === undefined || value === '') return '-';
-  const quota = Number(value || 0);
-  if (quota <= 0) return '不限额度';
-  return formatMoney(quota);
+  const limit = Number(value || 0);
+  if (limit <= 0) return '未设置';
+  return formatMoney(limit);
 }
 
 export function formatDuration(value) {
@@ -95,12 +95,12 @@ function renderOverview(payload) {
   document.querySelector('#overviewRefreshTime').textContent = payload.refreshedAt ? `上次刷新 ${formatTime(payload.refreshedAt)}` : '';
   document.querySelector('#todayCost').textContent = formatMoney(payload.summary?.todayCost);
   document.querySelector('#todayRequests').textContent = String(payload.summary?.todayRequests || 0);
-  document.querySelector('#totalQuota').textContent = formatQuota(payload.summary?.quota);
+  document.querySelector('#dailyLimit').textContent = formatKeyLimit(payload.summary?.dailyLimit);
   document.querySelector('#todayStatus').textContent = payload.summary?.statusName || '-';
   document.querySelector('#overviewKeys').innerHTML = (payload.keys || []).map((key) => `
     <div class="overview-key-row">
       <span><b>${escapeHtml(key.name)}</b><small>${escapeHtml(key.maskedKey)}</small></span>
-      <span>${formatQuota(key.quota)}</span>
+      <span>${formatKeyLimit(key.dailyLimit)}</span>
       <b>${formatMoney(key.todayCost)}</b>
       <span>${Number(key.todayRequests || 0)} 次</span>
     </div>

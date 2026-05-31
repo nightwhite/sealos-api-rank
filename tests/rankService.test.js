@@ -60,7 +60,7 @@ describe('createRankService', () => {
     const client = {
       listUsers: vi.fn(async () => ({ items: [{ id: 10 }, { id: 20 }] })),
       listUserAPIKeys: vi.fn(async (userId) => userId === 10
-        ? [{ id: 1, name: 'Alpha', key: 'sk-alpha-secret-1111', status: 'active', quota: 500, quota_used: 128.5 }]
+        ? [{ id: 1, name: 'Alpha', key: 'sk-alpha-secret-1111', status: 'active', quota: 0, quota_used: 0, rate_limit_1d: 900, usage_1d: 470.72 }]
         : [
           { id: 2, name: 'Beta', key: 'sk-beta-secret-2222', status: 'active' },
           { id: 3, name: 'Disabled', key: 'sk-disabled-secret-3333', status: 'disabled' },
@@ -75,7 +75,7 @@ describe('createRankService', () => {
     await service.refreshRankings({ period: 'daily' });
 
     expect(client.getUsageStats.mock.calls.map(([keyId]) => keyId).sort()).toEqual([1, 2]);
-    expect(db.findAPIKeyByHash(keyHash('sk-alpha-secret-1111'))).toMatchObject({ id: '1', name: 'Alpha', status: 'active', quota: 500, quotaUsed: 128.5 });
+    expect(db.findAPIKeyByHash(keyHash('sk-alpha-secret-1111'))).toMatchObject({ id: '1', name: 'Alpha', status: 'active', rateLimit1d: 900, usage1d: 470.72 });
     expect(db.getRankSnapshot('daily')).toMatchObject({
       period: 'daily',
       refreshedAt: '2026-05-28T04:00:00.000Z',

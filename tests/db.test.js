@@ -77,8 +77,8 @@ describe('createDatabase', () => {
     const db = createDatabase(tempDbPath());
 
     db.replaceAPIKeys([
-      { id: 1, userId: 10, keyHash: 'hash-alpha', name: 'Alpha', maskedKey: 'sk-alpha••••1111', status: 'active', quota: 500, quotaUsed: 128.5 },
-      { id: 2, userId: 20, keyHash: 'hash-beta', name: 'Beta', maskedKey: 'sk-beta••••2222', status: 'disabled', quota: 0, quotaUsed: 0 },
+      { id: 1, userId: 10, keyHash: 'hash-alpha', name: 'Alpha', maskedKey: 'sk-alpha••••1111', status: 'active', quota: 0, quotaUsed: 0, rateLimit1d: 900, usage1d: 470.72 },
+      { id: 2, userId: 20, keyHash: 'hash-beta', name: 'Beta', maskedKey: 'sk-beta••••2222', status: 'disabled', quota: 0, quotaUsed: 0, rateLimit1d: 0, usage1d: 0 },
     ]);
 
     expect(db.findAPIKeyByHash('hash-alpha')).toMatchObject({
@@ -88,12 +88,14 @@ describe('createDatabase', () => {
       name: 'Alpha',
       maskedKey: 'sk-alpha••••1111',
       status: 'active',
-      quota: 500,
-      quotaUsed: 128.5,
+      quota: 0,
+      quotaUsed: 0,
+      rateLimit1d: 900,
+      usage1d: 470.72,
     });
     expect(db.listAPIKeys()).toEqual([
-      expect.objectContaining({ id: '1', userId: '10', name: 'Alpha', status: 'active', quota: 500, quotaUsed: 128.5 }),
-      expect.objectContaining({ id: '2', userId: '20', name: 'Beta', status: 'disabled', quota: 0, quotaUsed: 0 }),
+      expect.objectContaining({ id: '1', userId: '10', name: 'Alpha', status: 'active', rateLimit1d: 900, usage1d: 470.72 }),
+      expect.objectContaining({ id: '2', userId: '20', name: 'Beta', status: 'disabled', rateLimit1d: 0, usage1d: 0 }),
     ]);
     db.close();
   });
@@ -121,9 +123,9 @@ describe('createDatabase', () => {
     const db = createDatabase(databasePath);
 
     db.replaceAPIKeys([
-      { id: 1, userId: 10, keyHash: 'hash-alpha', name: 'Alpha', maskedKey: 'sk-alpha••••1111', status: 'active', quota: 300, quotaUsed: 42 },
+      { id: 1, userId: 10, keyHash: 'hash-alpha', name: 'Alpha', maskedKey: 'sk-alpha••••1111', status: 'active', quota: 300, quotaUsed: 42, rateLimit1d: 900, usage1d: 470.72 },
     ]);
-    expect(db.findAPIKeyByHash('hash-alpha')).toMatchObject({ userId: '10', quota: 300, quotaUsed: 42 });
+    expect(db.findAPIKeyByHash('hash-alpha')).toMatchObject({ userId: '10', quota: 300, quotaUsed: 42, rateLimit1d: 900, usage1d: 470.72 });
     db.close();
   });
 

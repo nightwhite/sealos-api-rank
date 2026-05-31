@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatMoney, formatDuration, formatQuota, normalizePage, storageKey } from '../public/overview.js';
+import { formatMoney, formatDuration, formatKeyLimit, normalizePage, storageKey } from '../public/overview.js';
 import { readFileSync } from 'node:fs';
 
 describe('overview display helpers', () => {
@@ -8,10 +8,10 @@ describe('overview display helpers', () => {
     expect(formatMoney(0)).toBe('$0.00');
   });
 
-  it('formats total quota for overview cards', () => {
-    expect(formatQuota(500)).toBe('$500.00');
-    expect(formatQuota(0)).toBe('不限额度');
-    expect(formatQuota(null)).toBe('-');
+  it('formats key daily limit for overview cards', () => {
+    expect(formatKeyLimit(900)).toBe('$900.00');
+    expect(formatKeyLimit(0)).toBe('未设置');
+    expect(formatKeyLimit(null)).toBe('-');
   });
 
   it('formats request duration', () => {
@@ -43,5 +43,6 @@ describe('overview page structure', () => {
 
     expect(html).toContain('id="overviewRefreshButton"');
     expect(html).toContain('手动刷新');
+    expect(html).toContain('今日限额');
   });
 });

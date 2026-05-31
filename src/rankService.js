@@ -15,6 +15,8 @@ export function createRankService({ client, db, now = () => new Date() }) {
         status: key.status,
         quota: key.quota,
         quotaUsed: key.quota_used,
+        rateLimit1d: key.rate_limit_1d,
+        usage1d: key.usage_1d,
       })));
 
       const activeKeys = keys.filter((key) => key.status === 'active');
