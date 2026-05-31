@@ -2,6 +2,7 @@ export const storageKey = 'sub2api_rank_user_key';
 const hasDocument = typeof document !== 'undefined';
 let currentPage = 1;
 let pageSize = 20;
+let recordsRequestId = 0;
 
 export function formatMoney(value) {
   return `$${Number(value || 0).toFixed(2)}`;
@@ -73,7 +74,7 @@ async function loadOverview() {
     const overview = await postJson('/api/overview', { apiKey });
     renderOverview(overview);
     currentPage = 1;
-    await loadRecords();
+    void loadRecords();
   } catch (error) {
     document.querySelector('#overviewError').textContent = error.message;
   } finally {
@@ -84,17 +85,22 @@ async function loadOverview() {
 
 async function loadRecords() {
   const apiKey = String(document.querySelector('#overviewApiKey').value || '').trim();
+  const requestId = ++recordsRequestId;
   showRecordsLoading();
   try {
     const records = await postJson('/api/overview/records', { apiKey, page: currentPage, pageSize });
+    if (requestId !== recordsRequestId) return;
     renderRecords(records);
   } catch (error) {
+    if (requestId !== recordsRequestId) return;
     document.querySelector('#overviewRecords').innerHTML = `<div class="overview-empty">${escapeHtml(error.message)}</div>`;
   }
 }
 
 function showRecordsLoading() {
   document.querySelector('#overviewRecords').innerHTML = loadingRecordsMarkup();
+  document.querySelector('#prevRecords').disabled = true;
+  document.querySelector('#nextRecords').disabled = true;
 }
 
 function renderOverview(payload) {

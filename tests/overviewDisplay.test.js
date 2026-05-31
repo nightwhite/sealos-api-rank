@@ -65,15 +65,24 @@ describe('overview page structure', () => {
     expect(html).not.toContain('<span>密钥</span>');
   });
 
-  it('keeps refresh buttons disabled until records finish loading', () => {
+  it('keeps overview actions independent from slow records loading', () => {
     const script = readFileSync('public/overview.js', 'utf8');
 
-    expect(script).toMatch(/currentPage = 1;\s+await loadRecords\(\);/);
+    expect(script).toMatch(/currentPage = 1;\s+void loadRecords\(\);/);
+    expect(script).not.toMatch(/currentPage = 1;\s+await loadRecords\(\);/);
+  });
+
+  it('guards records rendering from stale requests', () => {
+    const script = readFileSync('public/overview.js', 'utf8');
+
+    expect(script).toContain('let recordsRequestId = 0;');
+    expect(script).toContain('const requestId = ++recordsRequestId;');
+    expect(script).toContain('requestId !== recordsRequestId');
   });
 
   it('shows the loading state for every records request', () => {
     const script = readFileSync('public/overview.js', 'utf8');
 
-    expect(script).toMatch(/async function loadRecords\(\) \{\s+const apiKey[^;]+;\s+showRecordsLoading\(\);/);
+    expect(script).toMatch(/async function loadRecords\(\) \{\s+const apiKey[^;]+;\s+const requestId = \+\+recordsRequestId;\s+showRecordsLoading\(\);/);
   });
 });
