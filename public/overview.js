@@ -20,6 +20,14 @@ export function formatDuration(value) {
   return `${ms}ms`;
 }
 
+export function formatTokens(value) {
+  return Number(value || 0).toLocaleString('en-US');
+}
+
+export function formatTokenMillions(value) {
+  return `${(Number(value || 0) / 1000000).toFixed(1)}M`;
+}
+
 export function normalizePage(value) {
   const page = Number.parseInt(value || '1', 10);
   return Number.isFinite(page) && page > 0 ? page : 1;
@@ -95,6 +103,7 @@ function renderOverview(payload) {
   document.querySelector('#overviewRefreshTime').textContent = payload.refreshedAt ? `上次刷新 ${formatTime(payload.refreshedAt)}` : '';
   document.querySelector('#todayCost').textContent = formatMoney(payload.summary?.todayCost);
   document.querySelector('#todayRequests').textContent = String(payload.summary?.todayRequests || 0);
+  document.querySelector('#todayTokens').textContent = formatTokenMillions(payload.summary?.todayTokens);
   document.querySelector('#dailyLimit').textContent = formatKeyLimit(payload.summary?.dailyLimit);
   document.querySelector('#todayStatus').textContent = payload.summary?.statusName || '-';
   document.querySelector('#overviewKeys').innerHTML = (payload.keys || []).map((key) => `
@@ -112,8 +121,8 @@ function renderRecords(payload) {
   document.querySelector('#overviewRecords').innerHTML = items.length ? items.map((item) => `
     <div class="overview-record-row">
       <span>${escapeHtml(formatTime(item.createdAt))}</span>
-      <span>${escapeHtml(item.keyName)}</span>
       <span>${escapeHtml(item.model)}</span>
+      <span>${formatTokens(item.tokens)}</span>
       <b>${formatMoney(item.cost)}</b>
       <span>${formatDuration(item.durationMs)}</span>
     </div>

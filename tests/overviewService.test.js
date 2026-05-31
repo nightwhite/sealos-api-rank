@@ -49,7 +49,7 @@ function createFixture() {
       page: 1,
       page_size: 20,
       total: 1,
-      items: [{ id: 9001, api_key_id: 7, model: 'gpt-4.1', actual_cost: 0.042, duration_ms: 1300, request_type: 'stream', created_at: '2026-05-31T11:58:00.000Z' }],
+      items: [{ id: 9001, api_key_id: 7, model: 'gpt-4.1', input_tokens: 100, output_tokens: 20, cache_creation_tokens: 3, cache_read_tokens: 4, actual_cost: 0.042, duration_ms: 1300, request_type: 'stream', created_at: '2026-05-31T11:58:00.000Z' }],
     })),
   };
   const service = createOverviewService({ client, db, now: () => new Date('2026-05-31T12:00:00+08:00') });
@@ -73,9 +73,9 @@ describe('createOverviewService', () => {
 
     expect(client.getAdminUsageStats).not.toHaveBeenCalled();
     expect(client.listUsers).not.toHaveBeenCalled();
-    expect(result.summary).toEqual({ todayCost: 2.18, todayRequests: 98, activeKeyCount: 1, quota: 0, quotaUsed: 0, quotaRemaining: null, dailyLimit: 900, dailyLimitUsed: 470.72, dailyLimitRemaining: 429.28, statusName: '初燃灵火' });
+    expect(result.summary).toEqual({ todayCost: 2.18, todayRequests: 98, todayTokens: 1234, activeKeyCount: 1, quota: 0, quotaUsed: 0, quotaRemaining: null, dailyLimit: 900, dailyLimitUsed: 470.72, dailyLimitRemaining: 429.28, statusName: '初燃灵火' });
     expect(result.keys).toEqual([
-      expect.objectContaining({ id: '7', name: '金鳞主钥', status: 'active', todayCost: 2.18, todayRequests: 98, dailyLimit: 900, dailyLimitUsed: 470.72, dailyLimitRemaining: 429.28 }),
+      expect.objectContaining({ id: '7', name: '金鳞主钥', status: 'active', todayCost: 2.18, todayRequests: 98, todayTokens: 1234, dailyLimit: 900, dailyLimitUsed: 470.72, dailyLimitRemaining: 429.28 }),
     ]);
     expect(result.refreshedAt).toBe('2026-05-31T11:55:00.000Z');
   });
@@ -116,7 +116,7 @@ describe('createOverviewService', () => {
       page: 1,
       pageSize: 20,
       total: 1,
-      items: [expect.objectContaining({ id: '9001', keyName: '金鳞主钥', model: 'gpt-4.1', cost: 0.042, durationMs: 1300, status: 'success' })],
+      items: [expect.objectContaining({ id: '9001', keyName: '金鳞主钥', model: 'gpt-4.1', tokens: 127, cost: 0.042, durationMs: 1300, status: 'success' })],
     });
   });
 });

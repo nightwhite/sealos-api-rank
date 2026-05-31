@@ -243,7 +243,7 @@ h2 { margin: 0; font-size: 26px; letter-spacing: -.04em; }
 
 .overview-cards {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 16px;
   margin-bottom: 18px;
 }
@@ -299,7 +299,7 @@ h2 { margin: 0; font-size: 26px; letter-spacing: -.04em; }
 
 .overview-record-head,
 .overview-record-row {
-  grid-template-columns: 1.2fr 1fr 1fr 0.7fr 0.6fr;
+  grid-template-columns: 1.4fr 1fr 0.8fr 0.7fr 0.6fr;
 }
 
 .overview-key-head,

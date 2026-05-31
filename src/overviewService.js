@@ -29,6 +29,7 @@ export function createOverviewService({ client, db, now = () => new Date() }) {
       if (!snapshot.refreshedAt || !snapshotRow) throw new Error('请等待榜单刷新后再查看');
       const todayCost = Number(snapshotRow.actualCost || 0);
       const todayRequests = Number(snapshotRow.requests || 0);
+      const todayTokens = Number(snapshotRow.tokens || 0);
       const keyRows = [{
         id: String(key.id),
         name: snapshotRow.keyName,
@@ -42,6 +43,7 @@ export function createOverviewService({ client, db, now = () => new Date() }) {
         dailyLimitRemaining: dailyLimitRemaining(key),
         todayCost,
         todayRequests,
+        todayTokens,
       }];
       return {
         refreshedAt: snapshot.refreshedAt,
@@ -49,6 +51,7 @@ export function createOverviewService({ client, db, now = () => new Date() }) {
         summary: {
           todayCost,
           todayRequests,
+          todayTokens,
           activeKeyCount: 1,
           quota: Number(key.quota || 0),
           quotaUsed: Number(key.quotaUsed || 0),
@@ -87,6 +90,7 @@ export function createOverviewService({ client, db, now = () => new Date() }) {
             maskedKey: key.maskedKey,
             model: item.model || '-',
             requestType: item.request_type || '',
+            tokens: usageLogTokens(item),
             cost: Number(item.actual_cost || 0),
             durationMs: Number(item.duration_ms || 0),
             status: 'success',
@@ -116,6 +120,13 @@ function dailyLimitRemaining(key) {
   const limit = Number(key.rateLimit1d || 0);
   if (limit <= 0) return null;
   return Math.max(0, limit - Number(key.usage1d || 0));
+}
+
+function usageLogTokens(item) {
+  return Number(item.input_tokens || 0)
+    + Number(item.output_tokens || 0)
+    + Number(item.cache_creation_tokens || 0)
+    + Number(item.cache_read_tokens || 0);
 }
 
 function formatLocalDate(date) {

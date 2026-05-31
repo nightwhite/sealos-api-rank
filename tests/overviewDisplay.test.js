@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatMoney, formatDuration, formatKeyLimit, normalizePage, storageKey } from '../public/overview.js';
+import { formatMoney, formatDuration, formatKeyLimit, formatTokens, formatTokenMillions, normalizePage, storageKey } from '../public/overview.js';
 import { readFileSync } from 'node:fs';
 
 describe('overview display helpers', () => {
@@ -17,6 +17,17 @@ describe('overview display helpers', () => {
   it('formats request duration', () => {
     expect(formatDuration(1300)).toBe('1.3s');
     expect(formatDuration(80)).toBe('80ms');
+  });
+
+  it('formats token counts', () => {
+    expect(formatTokens(1234567)).toBe('1,234,567');
+    expect(formatTokens(0)).toBe('0');
+  });
+
+  it('formats large total token counts in millions', () => {
+    expect(formatTokenMillions(578527808)).toBe('578.5M');
+    expect(formatTokenMillions(1200000)).toBe('1.2M');
+    expect(formatTokenMillions(998000)).toBe('1.0M');
   });
 
   it('normalizes pagination values', () => {
@@ -44,5 +55,13 @@ describe('overview page structure', () => {
     expect(html).toContain('id="overviewRefreshButton"');
     expect(html).toContain('手动刷新');
     expect(html).toContain('今日限额');
+    expect(html).toContain('今日 Tokens');
+  });
+
+  it('does not show a key column in usage records', () => {
+    const html = readFileSync('public/overview.html', 'utf8');
+
+    expect(html).toContain('<div class="overview-record-head"><span>时间</span><span>模型</span><span>Tokens</span><span>消耗</span><span>耗时</span></div>');
+    expect(html).not.toContain('<span>密钥</span>');
   });
 });

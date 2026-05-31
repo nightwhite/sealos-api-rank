@@ -52,7 +52,7 @@ function createTestApp() {
       page: 1,
       page_size: 20,
       total: 1,
-      items: [{ id: 9001, api_key_id: 1, model: 'gpt-4.1', actual_cost: 0.042, duration_ms: 1300, request_type: 'stream', created_at: '2026-05-31T11:58:00.000Z' }],
+      items: [{ id: 9001, api_key_id: 1, model: 'gpt-4.1', input_tokens: 10, output_tokens: 20, cache_creation_tokens: 3, cache_read_tokens: 4, actual_cost: 0.042, duration_ms: 1300, request_type: 'stream', created_at: '2026-05-31T11:58:00.000Z' }],
     })),
     getUsageStats: vi.fn(async () => ({ total_actual_cost: 10, total_tokens: 99 })),
   };
@@ -109,8 +109,8 @@ describe('createApp', () => {
     const response = await request(app).post('/api/overview').send({ apiKey: 'sk-alpha-secret-1111' });
 
     expect(response.status, response.body.message).toBe(200);
-    expect(response.body.summary).toMatchObject({ todayCost: 10, todayRequests: 8, activeKeyCount: 1, dailyLimit: 900, dailyLimitUsed: 470.72, dailyLimitRemaining: 429.28 });
-    expect(response.body.keys[0]).toMatchObject({ name: 'Alpha', todayCost: 10, todayRequests: 8, dailyLimit: 900, dailyLimitUsed: 470.72, dailyLimitRemaining: 429.28 });
+    expect(response.body.summary).toMatchObject({ todayCost: 10, todayRequests: 8, todayTokens: 99, activeKeyCount: 1, dailyLimit: 900, dailyLimitUsed: 470.72, dailyLimitRemaining: 429.28 });
+    expect(response.body.keys[0]).toMatchObject({ name: 'Alpha', todayCost: 10, todayRequests: 8, todayTokens: 99, dailyLimit: 900, dailyLimitUsed: 470.72, dailyLimitRemaining: 429.28 });
   });
 
   it('returns paginated submitted API key records', async () => {
@@ -120,7 +120,7 @@ describe('createApp', () => {
 
     expect(response.status, response.body.message).toBe(200);
     expect(response.body).toMatchObject({ page: 1, pageSize: 20, total: 1 });
-    expect(response.body.items[0]).toMatchObject({ keyName: 'Alpha', model: 'gpt-4.1', cost: 0.042 });
+    expect(response.body.items[0]).toMatchObject({ keyName: 'Alpha', model: 'gpt-4.1', tokens: 37, cost: 0.042 });
   });
 
   it('validates overview API key input', async () => {
