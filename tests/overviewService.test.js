@@ -119,4 +119,23 @@ describe('createOverviewService', () => {
       items: [expect.objectContaining({ id: '9001', keyName: '金鳞主钥', model: 'gpt-4.1', tokens: 127, cost: 0.042, durationMs: 1300, status: 'success' })],
     });
   });
+
+  it('queries records by Asia/Shanghai date instead of server local date', async () => {
+    const previousTimezone = process.env.TZ;
+    process.env.TZ = 'UTC';
+    try {
+      const { client, db } = createFixture();
+      const service = createOverviewService({ client, db, now: () => new Date('2026-05-31T01:00:00+08:00') });
+      db.replaceAPIKeys([{ id: 7, userId: 10, keyHash: hashKey('sk-alpha-secret-1111'), name: '金鳞主钥', maskedKey: 'sk-alpha••••1111', status: 'active' }]);
+
+      await service.getRecords({ apiKey: 'sk-alpha-secret-1111', page: 1, pageSize: 20 });
+
+      expect(client.listAdminUsage).toHaveBeenCalledWith(expect.objectContaining({
+        start_date: '2026-05-31',
+        end_date: '2026-05-31',
+      }));
+    } finally {
+      process.env.TZ = previousTimezone;
+    }
+  });
 });

@@ -53,6 +53,19 @@ describe('periodDateRange', () => {
     expect(periodDateRange('daily', now)).toEqual({ startDate: '2026-05-28', endDate: '2026-05-28', dayCount: 1 });
     expect(periodDateRange('monthly', now)).toEqual({ startDate: '2026-05-01', endDate: '2026-05-28', dayCount: 28 });
   });
+
+  it('uses Asia/Shanghai dates instead of server local dates', () => {
+    const previousTimezone = process.env.TZ;
+    process.env.TZ = 'UTC';
+    try {
+      const shanghaiEarlyMorning = new Date('2026-05-31T01:00:00+08:00');
+
+      expect(periodDateRange('daily', shanghaiEarlyMorning)).toEqual({ startDate: '2026-05-31', endDate: '2026-05-31', dayCount: 1 });
+      expect(periodDateRange('monthly', shanghaiEarlyMorning)).toEqual({ startDate: '2026-05-01', endDate: '2026-05-31', dayCount: 31 });
+    } finally {
+      process.env.TZ = previousTimezone;
+    }
+  });
 });
 
 describe('createRankService', () => {

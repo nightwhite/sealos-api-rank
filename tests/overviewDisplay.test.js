@@ -64,4 +64,16 @@ describe('overview page structure', () => {
     expect(html).toContain('<div class="overview-record-head"><span>时间</span><span>模型</span><span>Tokens</span><span>消耗</span><span>耗时</span></div>');
     expect(html).not.toContain('<span>密钥</span>');
   });
+
+  it('keeps refresh buttons disabled until records finish loading', () => {
+    const script = readFileSync('public/overview.js', 'utf8');
+
+    expect(script).toMatch(/currentPage = 1;\s+await loadRecords\(\);/);
+  });
+
+  it('shows the loading state for every records request', () => {
+    const script = readFileSync('public/overview.js', 'utf8');
+
+    expect(script).toMatch(/async function loadRecords\(\) \{\s+const apiKey[^;]+;\s+showRecordsLoading\(\);/);
+  });
 });

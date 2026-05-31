@@ -73,8 +73,7 @@ async function loadOverview() {
     const overview = await postJson('/api/overview', { apiKey });
     renderOverview(overview);
     currentPage = 1;
-    showRecordsLoading();
-    loadRecords();
+    await loadRecords();
   } catch (error) {
     document.querySelector('#overviewError').textContent = error.message;
   } finally {
@@ -85,6 +84,7 @@ async function loadOverview() {
 
 async function loadRecords() {
   const apiKey = String(document.querySelector('#overviewApiKey').value || '').trim();
+  showRecordsLoading();
   try {
     const records = await postJson('/api/overview/records', { apiKey, page: currentPage, pageSize });
     renderRecords(records);

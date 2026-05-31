@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { formatShanghaiDate } from './date.js';
 
 const timezone = 'Asia/Shanghai';
 const statusRules = [
@@ -67,7 +68,7 @@ export function createOverviewService({ client, db, now = () => new Date() }) {
 
     async getRecords({ apiKey, page = 1, pageSize = 20 }) {
       const key = findCachedKey(apiKey);
-      const today = formatLocalDate(now());
+      const today = formatShanghaiDate(now());
       const result = await client.listAdminUsage({
         api_key_id: Number(key.id),
         page,
@@ -127,12 +128,4 @@ function usageLogTokens(item) {
     + Number(item.output_tokens || 0)
     + Number(item.cache_creation_tokens || 0)
     + Number(item.cache_read_tokens || 0);
-}
-
-function formatLocalDate(date) {
-  const value = new Date(date);
-  const year = value.getFullYear();
-  const month = String(value.getMonth() + 1).padStart(2, '0');
-  const day = String(value.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
 }

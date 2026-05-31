@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { buildRankingSnapshot } from './rankings.js';
 import { maskApiKey } from './mask.js';
+import { formatShanghaiDate } from './date.js';
 
 export function createRankService({ client, db, now = () => new Date() }) {
   return {
@@ -106,11 +107,10 @@ async function loadUsageByKeyId(client, rankedKeys, period, dateRange) {
 
 export function periodDateRange(period, value) {
   const date = new Date(value);
-  const endDate = formatLocalDate(date);
+  const endDate = formatShanghaiDate(date);
   if (period === 'monthly') {
-    const monthStart = new Date(date);
-    monthStart.setDate(1);
-    return { startDate: formatLocalDate(monthStart), endDate, dayCount: date.getDate() };
+    const dayCount = Number(endDate.slice(-2));
+    return { startDate: `${endDate.slice(0, 8)}01`, endDate, dayCount };
   }
   return { startDate: endDate, endDate, dayCount: 1 };
 }
@@ -126,11 +126,4 @@ async function listAllKeys(client) {
 
 function hashAPIKey(apiKey) {
   return createHash('sha256').update(String(apiKey || '').trim()).digest('hex');
-}
-
-function formatLocalDate(date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
 }
