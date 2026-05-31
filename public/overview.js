@@ -3,6 +3,7 @@ const hasDocument = typeof document !== 'undefined';
 let currentPage = 1;
 let pageSize = 20;
 let recordsRequestId = 0;
+let activeApiKey = '';
 
 export function formatMoney(value) {
   return `$${Number(value || 0).toFixed(2)}`;
@@ -75,6 +76,7 @@ async function loadOverview() {
   if (refreshButton) refreshButton.disabled = true;
   try {
     const overview = await postJson('/api/overview', { apiKey });
+    activeApiKey = apiKey;
     renderOverview(overview);
     currentPage = 1;
     void loadRecords();
@@ -88,7 +90,7 @@ async function loadOverview() {
 }
 
 async function loadRecords() {
-  const apiKey = String(document.querySelector('#overviewApiKey').value || '').trim();
+  const apiKey = activeApiKey;
   const requestId = ++recordsRequestId;
   showRecordsLoading();
   try {

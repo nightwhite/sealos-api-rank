@@ -86,6 +86,15 @@ describe('overview page structure', () => {
     expect(script).toMatch(/async function loadRecords\(\) \{\s+const apiKey[^;]+;\s+const requestId = \+\+recordsRequestId;\s+showRecordsLoading\(\);/);
   });
 
+  it('uses the submitted API key for records pagination', () => {
+    const script = readFileSync('public/overview.js', 'utf8');
+
+    expect(script).toContain('let activeApiKey =');
+    expect(script).toMatch(/activeApiKey = apiKey;/);
+    expect(script).toMatch(/async function loadRecords\(\) \{\s+const apiKey = activeApiKey;/);
+    expect(script).not.toMatch(/async function loadRecords\(\) \{\s+const apiKey = String\(document\.querySelector\('#overviewApiKey'\)/);
+  });
+
   it('prevents duplicate overview requests while loading', () => {
     const script = readFileSync('public/overview.js', 'utf8');
 
