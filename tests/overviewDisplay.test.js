@@ -59,6 +59,14 @@ describe('overview page structure', () => {
     expect(html).toContain('今日 Tokens');
   });
 
+  it('shows total quota for the current API key', () => {
+    const html = readFileSync('public/overview.html', 'utf8');
+    const script = readFileSync('public/overview.js', 'utf8');
+
+    expect(html).toContain('<article><small>总额度</small><b id="totalQuota">-</b></article>');
+    expect(script).toContain("document.querySelector('#totalQuota').textContent = formatKeyLimit(payload.summary?.quota);");
+  });
+
   it('does not show a key column in usage records', () => {
     const html = readFileSync('public/overview.html', 'utf8');
 

@@ -125,6 +125,7 @@ function renderOverview(payload) {
   document.querySelector('#todayRequests').textContent = String(payload.summary?.todayRequests || 0);
   document.querySelector('#todayTokens').textContent = formatTokenMillions(payload.summary?.todayTokens);
   document.querySelector('#dailyLimit').textContent = formatKeyLimit(payload.summary?.dailyLimit);
+  document.querySelector('#totalQuota').textContent = formatKeyLimit(payload.summary?.quota);
   document.querySelector('#todayStatus').textContent = payload.summary?.statusName || '-';
   document.querySelector('#overviewKeys').innerHTML = (payload.keys || []).map((key) => `
     <div class="overview-key-row">

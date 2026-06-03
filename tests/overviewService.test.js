@@ -86,6 +86,18 @@ describe('createOverviewService', () => {
     expect(result.refreshedAt).toBe('2026-05-31T04:00:00.000Z');
   });
 
+  it('rounds quota remaining values to cents', async () => {
+    const { service, db } = createFixture();
+    db.replaceAPIKeys([{ id: 7, userId: 10, keyHash: hashKey('sk-alpha-secret-1111'), name: '金鳞主钥', maskedKey: 'sk-alpha••••1111', status: 'active', quota: 1000.1, quotaUsed: 999.82, rateLimit1d: 1000.1, usage1d: 999.82 }]);
+
+    const result = await service.getOverview({ apiKey: 'sk-alpha-secret-1111' });
+
+    expect(result.summary.quotaRemaining).toBe(0.28);
+    expect(result.summary.dailyLimitRemaining).toBe(0.28);
+    expect(result.keys[0].quotaRemaining).toBe(0.28);
+    expect(result.keys[0].dailyLimitRemaining).toBe(0.28);
+  });
+
   it('queries overview usage by Asia/Shanghai date instead of cached snapshot totals', async () => {
     const previousTimezone = process.env.TZ;
     process.env.TZ = 'UTC';
