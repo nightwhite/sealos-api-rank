@@ -93,6 +93,11 @@ async function loadOverview() {
 
 async function loadRecords() {
   const apiKey = activeApiKey;
+  if (!apiKey) {
+    currentPage = 1;
+    updateRecordsPager({ page: 1, total: 0, pageSize });
+    return;
+  }
   const requestId = ++recordsRequestId;
   showRecordsLoading();
   try {
@@ -146,8 +151,9 @@ function renderRecords(payload) {
 }
 
 function updateRecordsPager(payload = {}) {
-  const page = Number(payload.page || currentPage);
   const totalPages = Math.max(1, Math.ceil(Number(payload.total || 0) / Number(payload.pageSize || pageSize)));
+  const page = Math.min(totalPages, Math.max(1, Number(payload.page || currentPage)));
+  currentPage = page;
   document.querySelector('#overviewPageInfo').textContent = `${page} / ${totalPages}`;
   document.querySelector('#prevRecords').disabled = page <= 1;
   document.querySelector('#nextRecords').disabled = page >= totalPages;

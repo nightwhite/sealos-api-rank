@@ -84,7 +84,7 @@ describe('overview page structure', () => {
   it('shows the loading state for every records request', () => {
     const script = readFileSync('public/overview.js', 'utf8');
 
-    expect(script).toMatch(/async function loadRecords\(\) \{\s+const apiKey[^;]+;\s+const requestId = \+\+recordsRequestId;\s+showRecordsLoading\(\);/);
+    expect(script).toMatch(/if \(!apiKey\) \{[\s\S]+return;\s+\}\s+const requestId = \+\+recordsRequestId;\s+showRecordsLoading\(\);/);
   });
 
   it('uses the submitted API key for records pagination', () => {
@@ -116,5 +116,18 @@ describe('overview page structure', () => {
 
     expect(script).toContain('function updateRecordsPager(');
     expect(script).toMatch(/catch \(error\) \{[\s\S]+updateRecordsPager\(\);[\s\S]+}/);
+  });
+
+  it('does not request records before an overview key is active', () => {
+    const script = readFileSync('public/overview.js', 'utf8');
+
+    expect(script).toMatch(/async function loadRecords\(\) \{\s+const apiKey = activeApiKey;\s+if \(!apiKey\) \{[\s\S]+return;\s+}/);
+  });
+
+  it('clamps record pagination to the available page range', () => {
+    const script = readFileSync('public/overview.js', 'utf8');
+
+    expect(script).toContain('const page = Math.min(totalPages, Math.max(1, Number(payload.page || currentPage)));');
+    expect(script).toContain('currentPage = page;');
   });
 });
