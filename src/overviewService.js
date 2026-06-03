@@ -26,7 +26,7 @@ export function createOverviewService({ client, db, now = () => new Date() }) {
     async getOverview({ apiKey }) {
       const key = findCachedKey(apiKey);
       const today = formatShanghaiDate(now());
-      const stats = await client.getUsageStats(key.id, { startDate: today, endDate: today, dayCount: 1 });
+      const stats = await client.getUsageStats(key.id, { startDate: today, endDate: today, dayCount: 1 }) || {};
       const todayCost = Number(stats.total_actual_cost || 0);
       const todayRequests = Number(stats.total_requests || 0);
       const todayTokens = Number(stats.total_tokens || 0);

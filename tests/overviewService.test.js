@@ -122,6 +122,16 @@ describe('createOverviewService', () => {
     expect(result.summary).toMatchObject({ todayCost: 4.56, todayRequests: 123, todayTokens: 4567 });
   });
 
+  it('treats an empty realtime usage response as zero usage', async () => {
+    const { service, client, db } = createFixture();
+    db.replaceAPIKeys([{ id: 7, userId: 10, keyHash: hashKey('sk-alpha-secret-1111'), name: '金鳞主钥', maskedKey: 'sk-alpha••••1111', status: 'active' }]);
+    client.getUsageStats.mockResolvedValueOnce(null);
+
+    const result = await service.getOverview({ apiKey: 'sk-alpha-secret-1111' });
+
+    expect(result.summary).toMatchObject({ todayCost: 0, todayRequests: 0, todayTokens: 0 });
+  });
+
   it('explains missing cached API keys without implying the key is valid', async () => {
     const { service } = createFixture();
 

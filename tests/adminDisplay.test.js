@@ -32,7 +32,7 @@ describe('admin key visibility controls', () => {
   it('shows immediate feedback while saving visible keys', () => {
     const script = readFileSync('public/admin.js', 'utf8');
 
-    expect(script).toContain("adminMessage.textContent = '正在保存 Key 展示范围...';");
+    expect(script).toContain("setAdminMessage('正在保存 Key 展示范围...');");
     expect(script).toContain('saveKeysButton.disabled = true;');
     expect(script).toContain('saveKeysButton.disabled = false;');
   });
@@ -51,7 +51,10 @@ describe('admin key visibility controls', () => {
 
   it('shows a failed save message when the network request throws', () => {
     const script = readFileSync('public/admin.js', 'utf8');
+    const styles = readFileSync('public/styles.css', 'utf8');
 
-    expect(script).toMatch(/catch \(error\) \{[\s\S]+adminMessage\.textContent = '保存失败，请检查网络连接';[\s\S]+}/);
+    expect(script).toContain("setAdminMessage('保存失败，请检查网络连接', 'error');");
+    expect(script).toContain("setAdminMessage(`Key 展示范围已保存，当前展示 ${savedVisibleCount} 个`, 'success');");
+    expect(styles).toContain('.admin-message.error');
   });
 });

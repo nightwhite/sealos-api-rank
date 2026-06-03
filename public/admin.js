@@ -87,7 +87,7 @@ function renderRules(rules) {
 async function saveKeys() {
   const keyIds = [...keyList.querySelectorAll('input:checked')].map((item) => item.value);
   if (saveKeysResetTimer) window.clearTimeout(saveKeysResetTimer);
-  adminMessage.textContent = '正在保存 Key 展示范围...';
+  setAdminMessage('正在保存 Key 展示范围...');
   saveKeysButton.disabled = true;
   saveKeysButton.textContent = '保存中...';
   try {
@@ -98,14 +98,14 @@ async function saveKeys() {
     });
     if (!response.ok) {
       const payload = await response.json().catch(() => ({}));
-      adminMessage.textContent = payload.message || 'Key 展示范围保存失败';
+      setAdminMessage(payload.message || 'Key 展示范围保存失败', 'error');
       return;
     }
     await loadAdminData();
-    adminMessage.textContent = `Key 展示范围已保存，当前展示 ${savedVisibleCount} 个`;
+    setAdminMessage(`Key 展示范围已保存，当前展示 ${savedVisibleCount} 个`, 'success');
     saveKeysButton.textContent = '已保存';
   } catch (error) {
-    adminMessage.textContent = '保存失败，请检查网络连接';
+    setAdminMessage('保存失败，请检查网络连接', 'error');
   } finally {
     saveKeysButton.disabled = false;
     saveKeysResetTimer = window.setTimeout(() => {
@@ -121,7 +121,7 @@ async function saveRules() {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ rules: readRules() }),
   });
-  adminMessage.textContent = '境界规则已保存';
+  setAdminMessage('境界规则已保存', 'success');
 }
 
 function readRules() {
@@ -140,4 +140,10 @@ function updateKeyCount() {
   const total = keyList.querySelectorAll('input[type="checkbox"]').length;
   const selected = keyList.querySelectorAll('input:checked').length;
   keyCount.textContent = `已勾选 ${selected} / ${total}`;
+}
+
+function setAdminMessage(message, type = '') {
+  adminMessage.textContent = message;
+  adminMessage.classList.toggle('success', type === 'success');
+  adminMessage.classList.toggle('error', type === 'error');
 }

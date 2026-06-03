@@ -191,7 +191,9 @@ h2 { margin: 0; font-size: 26px; letter-spacing: -.04em; }
 .admin-card { background: white; border: 1px solid #e2e8f0; border-radius: 28px; padding: 28px; box-shadow: 0 22px 60px rgba(15,23,42,.08); }
 .admin-title-row { display: flex; justify-content: space-between; align-items: start; gap: 16px; margin-bottom: 18px; }
 .admin-title-row button, .secondary-button { border-radius: 14px; padding: 11px 15px; background: #0f172a; color: white; font-weight: 900; }
-.admin-message { min-height: 24px; color: #166534; font-weight: 800; }
+.admin-message { min-height: 24px; color: #64748b; font-weight: 800; }
+.admin-message.success { color: #166534; }
+.admin-message.error { color: #991b1b; }
 .light-form input { background: white; color: #0f172a; border-color: #cbd5e1; }
 .rules-title { margin-top: 30px; }
 .admin-list, .rule-list { border: 1px solid #e2e8f0; border-radius: 20px; overflow: hidden; }
