@@ -4,6 +4,7 @@ const passwordInput = document.querySelector('#passwordInput');
 const loginButton = document.querySelector('#loginButton');
 const loginError = document.querySelector('#loginError');
 const keyList = document.querySelector('#keyList');
+const keyCount = document.querySelector('#keyCount');
 const ruleList = document.querySelector('#ruleList');
 const adminMessage = document.querySelector('#adminMessage');
 let currentRulePeriod = 'daily';
@@ -58,6 +59,10 @@ function renderKeys(keys) {
       <em>${escapeHtml(key.status || '')}</em>
     </label>
   `).join('');
+  keyList.querySelectorAll('input[type="checkbox"]').forEach((input) => {
+    input.addEventListener('change', updateKeyCount);
+  });
+  updateKeyCount();
 }
 
 function renderRules(rules) {
@@ -76,12 +81,18 @@ function renderRules(rules) {
 
 async function saveKeys() {
   const keyIds = [...keyList.querySelectorAll('input:checked')].map((item) => item.value);
-  await fetch('/api/admin/visible-keys', {
+  const response = await fetch('/api/admin/visible-keys', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ keyIds }),
   });
-  adminMessage.textContent = 'Key 展示范围已保存';
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    adminMessage.textContent = payload.message || 'Key 展示范围保存失败';
+    return;
+  }
+  await loadAdminData();
+  adminMessage.textContent = `Key 展示范围已保存，已展示 ${keyIds.length} 个`;
 }
 
 async function saveRules() {
@@ -103,4 +114,10 @@ function readRules() {
 
 function escapeHtml(value) {
   return String(value).replace(/[&<>'"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char]));
+}
+
+function updateKeyCount() {
+  const total = keyList.querySelectorAll('input[type="checkbox"]').length;
+  const selected = keyList.querySelectorAll('input:checked').length;
+  keyCount.textContent = `已勾选 ${selected} / ${total}`;
 }
