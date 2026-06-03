@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { maskApiKey } from './mask.js';
+import { formatShanghaiDate } from './date.js';
 
 const timezone = 'Asia/Shanghai';
 const statusRules = [
@@ -13,60 +13,72 @@ const statusRules = [
 ];
 
 export function createOverviewService({ client, db, now = () => new Date() }) {
-  async function syncKeys() {
-    const users = await client.listUsers();
-    const keyGroups = await Promise.all((users.items || []).map(async (user) => {
-      const keys = await client.listUserAPIKeys(user.id);
-      return keys.map((key) => ({ ...key, userId: user.id }));
-    }));
-    db.replaceAPIKeys(keyGroups.flat().map((key) => ({
-      id: key.id,
-      userId: key.userId,
-      keyHash: hashAPIKey(key.key),
-      name: key.name || `Key #${key.id}`,
-      maskedKey: maskApiKey(key.key),
-      status: key.status,
-    })));
-  }
-
-  async function findOwner(apiKey) {
+  function findCachedKey(apiKey) {
     const normalized = String(apiKey || '').trim();
     if (!normalized) throw new Error('请先输入 API Key');
-    await syncKeys();
     const key = db.findAPIKeyByHash(hashAPIKey(normalized));
-    if (!key) throw new Error('未找到这个 API Key，请确认后再试');
+    if (!key) throw new Error('未找到该 API Key。如果是新创建的 Key，请等待榜单刷新后再试；否则请检查输入是否正确。');
     if (key.status !== 'active') throw new Error('这个 API Key 当前不可用');
     return key;
   }
 
   return {
     async getOverview({ apiKey }) {
-      const ownerKey = await findOwner(apiKey);
-      const summaryStats = await client.getAdminUsageStats({ api_key_id: Number(ownerKey.id), period: 'today', timezone });
+      const key = findCachedKey(apiKey);
+      const currentTime = now();
+      const today = formatShanghaiDate(currentTime);
+      const stats = await client.getUsageStats(key.id, { startDate: today, endDate: today, dayCount: 1 }) || {};
+      const todayCost = Number(stats.total_actual_cost || 0);
+      const todayRequests = Number(stats.total_requests || 0);
+      const todayTokens = Number(stats.total_tokens || 0);
       const keyRows = [{
-        id: String(ownerKey.id),
-        name: ownerKey.name || `Key #${ownerKey.id}`,
-        maskedKey: ownerKey.maskedKey,
-        status: ownerKey.status,
-        todayCost: Number(summaryStats.total_actual_cost || 0),
-        todayRequests: Number(summaryStats.total_requests || 0),
+        id: String(key.id),
+        name: key.name || `Key #${key.id}`,
+        maskedKey: key.maskedKey,
+        status: key.status,
+        quota: Number(key.quota || 0),
+        quotaUsed: Number(key.quotaUsed || 0),
+        quotaRemaining: quotaRemaining(key),
+        dailyLimit: Number(key.rateLimit1d || 0),
+        dailyLimitUsed: Number(key.usage1d || 0),
+        dailyLimitRemaining: dailyLimitRemaining(key),
+        todayCost,
+        todayRequests,
+        todayTokens,
       }];
       return {
-        refreshedAt: now().toISOString(),
-        user: { id: String(ownerKey.userId) },
+        refreshedAt: currentTime.toISOString(),
+        user: null,
         summary: {
-          todayCost: Number(summaryStats.total_actual_cost || 0),
-          todayRequests: Number(summaryStats.total_requests || 0),
+          todayCost,
+          todayRequests,
+          todayTokens,
           activeKeyCount: 1,
-          statusName: overviewStatusName(Number(summaryStats.total_actual_cost || 0)),
+          quota: Number(key.quota || 0),
+          quotaUsed: Number(key.quotaUsed || 0),
+          quotaRemaining: quotaRemaining(key),
+          dailyLimit: Number(key.rateLimit1d || 0),
+          dailyLimitUsed: Number(key.usage1d || 0),
+          dailyLimitRemaining: dailyLimitRemaining(key),
+          statusName: overviewStatusName(todayCost),
         },
         keys: keyRows,
       };
     },
 
     async getRecords({ apiKey, page = 1, pageSize = 20 }) {
-      const ownerKey = await findOwner(apiKey);
-      const result = await client.listAdminUsage({ api_key_id: Number(ownerKey.id), page, page_size: pageSize, sort_by: 'created_at', sort_order: 'desc', timezone });
+      const key = findCachedKey(apiKey);
+      const today = formatShanghaiDate(now());
+      const result = await client.listAdminUsage({
+        api_key_id: Number(key.id),
+        page,
+        page_size: pageSize,
+        sort_by: 'created_at',
+        sort_order: 'desc',
+        timezone,
+        start_date: today,
+        end_date: today,
+      });
       return {
         page: Number(result.page || page),
         pageSize: Number(result.page_size || pageSize),
@@ -75,10 +87,11 @@ export function createOverviewService({ client, db, now = () => new Date() }) {
           return {
             id: String(item.id),
             createdAt: item.created_at,
-            keyName: ownerKey.name || `Key #${ownerKey.id}`,
-            maskedKey: ownerKey.maskedKey,
+            keyName: key.name || `Key #${key.id}`,
+            maskedKey: key.maskedKey,
             model: item.model || '-',
             requestType: item.request_type || '',
+            tokens: usageLogTokens(item),
             cost: Number(item.actual_cost || 0),
             durationMs: Number(item.duration_ms || 0),
             status: 'success',
@@ -96,4 +109,27 @@ export function overviewStatusName(cost) {
 
 function hashAPIKey(apiKey) {
   return createHash('sha256').update(String(apiKey || '').trim()).digest('hex');
+}
+
+function quotaRemaining(key) {
+  const quota = Number(key.quota || 0);
+  if (quota <= 0) return null;
+  return roundMoney(Math.max(0, quota - Number(key.quotaUsed || 0)));
+}
+
+function dailyLimitRemaining(key) {
+  const limit = Number(key.rateLimit1d || 0);
+  if (limit <= 0) return null;
+  return roundMoney(Math.max(0, limit - Number(key.usage1d || 0)));
+}
+
+function roundMoney(value) {
+  return Math.round(Number(value || 0) * 100) / 100;
+}
+
+function usageLogTokens(item) {
+  return Number(item.input_tokens || 0)
+    + Number(item.output_tokens || 0)
+    + Number(item.cache_creation_tokens || 0)
+    + Number(item.cache_read_tokens || 0);
 }

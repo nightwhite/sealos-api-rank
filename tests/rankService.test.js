@@ -47,11 +47,43 @@ function createMemoryDb() {
   };
 }
 
+function makeSnapshotRow(overrides) {
+  return {
+    rank: null,
+    keyId: '1',
+    keyName: 'Alpha',
+    maskedKey: 'sk-alpha••••1111',
+    actualCost: 0,
+    realmCost: 0,
+    tokens: 0,
+    rankName: '凡人试炼',
+    rankColor: '#94a3b8',
+    nextRankName: null,
+    costToNextRank: null,
+    progress: 1,
+    visible: false,
+    ...overrides,
+  };
+}
+
 describe('periodDateRange', () => {
   it('builds daily and monthly date ranges', () => {
     const now = new Date('2026-05-28T12:00:00+08:00');
     expect(periodDateRange('daily', now)).toEqual({ startDate: '2026-05-28', endDate: '2026-05-28', dayCount: 1 });
     expect(periodDateRange('monthly', now)).toEqual({ startDate: '2026-05-01', endDate: '2026-05-28', dayCount: 28 });
+  });
+
+  it('uses Asia/Shanghai dates instead of server local dates', () => {
+    const previousTimezone = process.env.TZ;
+    process.env.TZ = 'UTC';
+    try {
+      const shanghaiEarlyMorning = new Date('2026-05-31T01:00:00+08:00');
+
+      expect(periodDateRange('daily', shanghaiEarlyMorning)).toEqual({ startDate: '2026-05-31', endDate: '2026-05-31', dayCount: 1 });
+      expect(periodDateRange('monthly', shanghaiEarlyMorning)).toEqual({ startDate: '2026-05-01', endDate: '2026-05-31', dayCount: 31 });
+    } finally {
+      process.env.TZ = previousTimezone;
+    }
   });
 });
 
@@ -60,14 +92,14 @@ describe('createRankService', () => {
     const client = {
       listUsers: vi.fn(async () => ({ items: [{ id: 10 }, { id: 20 }] })),
       listUserAPIKeys: vi.fn(async (userId) => userId === 10
-        ? [{ id: 1, name: 'Alpha', key: 'sk-alpha-secret-1111', status: 'active' }]
+        ? [{ id: 1, name: 'Alpha', key: 'sk-alpha-secret-1111', status: 'active', quota: 0, quota_used: 0, rate_limit_1d: 900, usage_1d: 470.72 }]
         : [
           { id: 2, name: 'Beta', key: 'sk-beta-secret-2222', status: 'active' },
           { id: 3, name: 'Disabled', key: 'sk-disabled-secret-3333', status: 'disabled' },
         ]),
       getUsageStats: vi.fn(async (keyId) => keyId === 1
-        ? { total_actual_cost: 12, total_tokens: 100 }
-        : { total_actual_cost: 24, total_tokens: 200 }),
+        ? { total_actual_cost: 12, total_requests: 10, total_tokens: 100 }
+        : { total_actual_cost: 24, total_requests: 20, total_tokens: 200 }),
     };
     const db = createMemoryDb();
     const service = createRankService({ client, db, now: () => new Date('2026-05-28T12:00:00+08:00') });
@@ -75,13 +107,13 @@ describe('createRankService', () => {
     await service.refreshRankings({ period: 'daily' });
 
     expect(client.getUsageStats.mock.calls.map(([keyId]) => keyId).sort()).toEqual([1, 2]);
-    expect(db.findAPIKeyByHash(keyHash('sk-alpha-secret-1111'))).toMatchObject({ id: '1', name: 'Alpha', status: 'active' });
+    expect(db.findAPIKeyByHash(keyHash('sk-alpha-secret-1111'))).toMatchObject({ id: '1', name: 'Alpha', status: 'active', rateLimit1d: 900, usage1d: 470.72 });
     expect(db.getRankSnapshot('daily')).toMatchObject({
       period: 'daily',
       refreshedAt: '2026-05-28T04:00:00.000Z',
       rows: [
-        expect.objectContaining({ keyId: '2', rank: 1, actualCost: 24, tokens: 200, visible: true }),
-        expect.objectContaining({ keyId: '1', rank: 2, actualCost: 12, tokens: 100, visible: true }),
+        expect.objectContaining({ keyId: '2', rank: 1, actualCost: 24, requests: 20, tokens: 200, visible: true }),
+        expect.objectContaining({ keyId: '1', rank: 2, actualCost: 12, requests: 10, tokens: 100, visible: true }),
       ],
     });
   });
@@ -187,6 +219,30 @@ describe('createRankService', () => {
 
     expect(result.rankings).toEqual([expect.objectContaining({ keyId: '1', rank: 1, visible: true })]);
     expect(result.currentKey).toMatchObject({ keyId: '1', rank: 1, visible: true, isCurrentUserKey: true });
+  });
+
+  it('orders rankings by recalculated ranks after visible keys change', async () => {
+    const db = createMemoryDb();
+    db.visibleIds = ['1', '2', '3'];
+    db.replaceAPIKeys([
+      { id: 1, keyHash: keyHash('sk-alpha-secret-1111'), name: 'Alpha', maskedKey: 'sk-alpha••••1111', status: 'active' },
+      { id: 2, keyHash: keyHash('sk-beta-secret-2222'), name: 'Beta', maskedKey: 'sk-beta••••2222', status: 'active' },
+      { id: 3, keyHash: keyHash('sk-gamma-secret-3333'), name: 'Gamma', maskedKey: 'sk-gamma••••3333', status: 'active' },
+    ]);
+    db.replaceRankSnapshot('daily', {
+      refreshedAt: '2026-05-28T04:00:00.000Z',
+      rows: [
+        makeSnapshotRow({ rank: 1, keyId: '1', keyName: 'Alpha', actualCost: 50, tokens: 500, visible: true }),
+        makeSnapshotRow({ rank: 2, keyId: '2', keyName: 'Beta', actualCost: 40, tokens: 400, visible: true }),
+        makeSnapshotRow({ rank: null, keyId: '3', keyName: 'Gamma', actualCost: 45, tokens: 450, visible: false }),
+      ],
+    });
+    const service = createRankService({ client: {}, db });
+
+    const result = await service.getRankings({ apiKey: 'sk-alpha-secret-1111', period: 'daily' });
+
+    expect(result.rankings.map((row) => row.keyId)).toEqual(['1', '3', '2']);
+    expect(result.rankings.map((row) => row.rank)).toEqual([1, 2, 3]);
   });
 
   it('rejects keys that are not in the local active key cache', async () => {

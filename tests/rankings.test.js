@@ -16,8 +16,8 @@ describe('buildRankings', () => {
         { id: 3, name: 'Hidden', key: 'sk-hidden-secret-3333', status: 'active' },
       ],
       usageByKeyId: new Map([
-        ['1', { actualCost: 300, tokens: 1000 }],
-        ['2', { actualCost: 600, tokens: 900 }],
+        ['1', { actualCost: 300, requests: 30, tokens: 1000 }],
+        ['2', { actualCost: 600, requests: 60, tokens: 900 }],
         ['3', { actualCost: 999, tokens: 9999 }],
       ]),
       visibleKeyIds: ['1', '2'],
@@ -27,7 +27,7 @@ describe('buildRankings', () => {
     });
 
     expect(result.rankings.map((row) => row.keyName)).toEqual(['Beta', 'Alpha']);
-    expect(result.rankings[0]).toMatchObject({ rank: 1, actualCost: 600, tokens: 900, rankName: '大乘飞升' });
+    expect(result.rankings[0]).toMatchObject({ rank: 1, actualCost: 600, requests: 60, tokens: 900, rankName: '大乘飞升' });
     expect(result.currentKey).toMatchObject({ rank: 2, keyName: 'Alpha', actualCost: 300, rankName: '元婴上线' });
     expect(result.currentKey.maskedKey).toBe('sk-alph••••••1111');
   });

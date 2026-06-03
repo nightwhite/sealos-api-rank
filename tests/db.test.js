@@ -77,8 +77,8 @@ describe('createDatabase', () => {
     const db = createDatabase(tempDbPath());
 
     db.replaceAPIKeys([
-      { id: 1, userId: 10, keyHash: 'hash-alpha', name: 'Alpha', maskedKey: 'sk-alpha••••1111', status: 'active' },
-      { id: 2, userId: 20, keyHash: 'hash-beta', name: 'Beta', maskedKey: 'sk-beta••••2222', status: 'disabled' },
+      { id: 1, userId: 10, keyHash: 'hash-alpha', name: 'Alpha', maskedKey: 'sk-alpha••••1111', status: 'active', quota: 0, quotaUsed: 0, rateLimit1d: 900, usage1d: 470.72 },
+      { id: 2, userId: 20, keyHash: 'hash-beta', name: 'Beta', maskedKey: 'sk-beta••••2222', status: 'disabled', quota: 0, quotaUsed: 0, rateLimit1d: 0, usage1d: 0 },
     ]);
 
     expect(db.findAPIKeyByHash('hash-alpha')).toMatchObject({
@@ -88,10 +88,14 @@ describe('createDatabase', () => {
       name: 'Alpha',
       maskedKey: 'sk-alpha••••1111',
       status: 'active',
+      quota: 0,
+      quotaUsed: 0,
+      rateLimit1d: 900,
+      usage1d: 470.72,
     });
     expect(db.listAPIKeys()).toEqual([
-      expect.objectContaining({ id: '1', userId: '10', name: 'Alpha', status: 'active' }),
-      expect.objectContaining({ id: '2', userId: '20', name: 'Beta', status: 'disabled' }),
+      expect.objectContaining({ id: '1', userId: '10', name: 'Alpha', status: 'active', rateLimit1d: 900, usage1d: 470.72 }),
+      expect.objectContaining({ id: '2', userId: '20', name: 'Beta', status: 'disabled', rateLimit1d: 0, usage1d: 0 }),
     ]);
     db.close();
   });
@@ -119,9 +123,9 @@ describe('createDatabase', () => {
     const db = createDatabase(databasePath);
 
     db.replaceAPIKeys([
-      { id: 1, userId: 10, keyHash: 'hash-alpha', name: 'Alpha', maskedKey: 'sk-alpha••••1111', status: 'active' },
+      { id: 1, userId: 10, keyHash: 'hash-alpha', name: 'Alpha', maskedKey: 'sk-alpha••••1111', status: 'active', quota: 300, quotaUsed: 42, rateLimit1d: 900, usage1d: 470.72 },
     ]);
-    expect(db.findAPIKeyByHash('hash-alpha')).toMatchObject({ userId: '10' });
+    expect(db.findAPIKeyByHash('hash-alpha')).toMatchObject({ userId: '10', quota: 300, quotaUsed: 42, rateLimit1d: 900, usage1d: 470.72 });
     db.close();
   });
 
@@ -138,6 +142,7 @@ describe('createDatabase', () => {
           maskedKey: 'sk-alpha••••1111',
           actualCost: 12.34,
           realmCost: 12.34,
+          requests: 12,
           tokens: 1234,
           rankName: '炼气入门',
           rankColor: '#22d3ee',
@@ -153,6 +158,7 @@ describe('createDatabase', () => {
           maskedKey: 'sk-hidden••••2222',
           actualCost: 99,
           realmCost: 99,
+          requests: 99,
           tokens: 999,
           rankName: '筑基敲码',
           rankColor: '#34d399',
@@ -168,8 +174,8 @@ describe('createDatabase', () => {
       period: 'daily',
       refreshedAt: '2026-05-30T00:00:00.000Z',
       rows: [
-        expect.objectContaining({ keyId: '1', rank: 1, visible: true, actualCost: 12.34, tokens: 1234 }),
-        expect.objectContaining({ keyId: '2', rank: null, visible: false, actualCost: 99, tokens: 999 }),
+        expect.objectContaining({ keyId: '1', rank: 1, visible: true, actualCost: 12.34, requests: 12, tokens: 1234 }),
+        expect.objectContaining({ keyId: '2', rank: null, visible: false, actualCost: 99, requests: 99, tokens: 999 }),
       ],
     });
     expect(db.getRankSnapshot('monthly')).toEqual({ period: 'monthly', refreshedAt: null, rows: [] });

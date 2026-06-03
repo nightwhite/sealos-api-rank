@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { buildRankingSnapshot } from './rankings.js';
 import { maskApiKey } from './mask.js';
+import { formatShanghaiDate } from './date.js';
 
 export function createRankService({ client, db, now = () => new Date() }) {
   return {
@@ -13,6 +14,10 @@ export function createRankService({ client, db, now = () => new Date() }) {
         name: key.name || `Key #${key.id}`,
         maskedKey: maskApiKey(key.key),
         status: key.status,
+        quota: key.quota,
+        quotaUsed: key.quota_used,
+        rateLimit1d: key.rate_limit_1d,
+        usage1d: key.usage_1d,
       })));
 
       const activeKeys = keys.filter((key) => key.status === 'active');
@@ -65,7 +70,9 @@ function applyCurrentVisibility(rows, visibleKeyIds) {
     .sort(compareVisibleRows)
     .map((row, index) => ({ ...row, rank: index + 1 }));
   const rankByKeyId = new Map(sortedVisibleRows.map((row) => [row.keyId, row.rank]));
-  return markedRows.map((row) => ({ ...row, rank: rankByKeyId.get(row.keyId) || null }));
+  return markedRows
+    .map((row) => ({ ...row, rank: rankByKeyId.get(row.keyId) || null }))
+    .sort(compareSnapshotRows);
 }
 
 function compareVisibleRows(first, second) {
@@ -93,6 +100,7 @@ async function loadUsageByKeyId(client, rankedKeys, period, dateRange) {
     usageByKeyId.set(String(key.id), {
       actualCost,
       realmCost: period === 'monthly' ? actualCost / dateRange.dayCount : actualCost,
+      requests: Number(stats.total_requests || 0),
       tokens: Number(stats.total_tokens || 0),
     });
   }
@@ -101,11 +109,10 @@ async function loadUsageByKeyId(client, rankedKeys, period, dateRange) {
 
 export function periodDateRange(period, value) {
   const date = new Date(value);
-  const endDate = formatLocalDate(date);
+  const endDate = formatShanghaiDate(date);
   if (period === 'monthly') {
-    const monthStart = new Date(date);
-    monthStart.setDate(1);
-    return { startDate: formatLocalDate(monthStart), endDate, dayCount: date.getDate() };
+    const dayCount = Number(endDate.slice(-2));
+    return { startDate: `${endDate.slice(0, 8)}01`, endDate, dayCount };
   }
   return { startDate: endDate, endDate, dayCount: 1 };
 }
@@ -121,11 +128,4 @@ async function listAllKeys(client) {
 
 function hashAPIKey(apiKey) {
   return createHash('sha256').update(String(apiKey || '').trim()).digest('hex');
-}
-
-function formatLocalDate(date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
 }

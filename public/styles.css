@@ -149,6 +149,17 @@ h2 { margin: 0; font-size: 26px; letter-spacing: -.04em; }
 .period-tabs { display: flex; gap: 10px; padding: 6px; border-radius: 999px; background: rgba(255,255,255,.34); border: 1px solid #d8c6a6; }
 .period-tabs button { border-radius: 999px; background: transparent; color: #756852; box-shadow: none; }
 .period-tabs button.active { background: #486b52; color: #f8efd8; }
+.refresh-button {
+  justify-self: end;
+  align-self: end;
+  border: 1px solid rgba(126, 89, 36, 0.26);
+  border-radius: 999px;
+  background: rgba(255, 248, 224, 0.72);
+  color: #4b2f12;
+  padding: 12px 18px;
+  font-weight: 900;
+}
+.refresh-button:disabled { opacity: .5; cursor: wait; }
 .summary-grid { display: grid; grid-template-columns: 1fr 150px; gap: 16px; margin-bottom: 20px; }
 .realm-card, .rank-number-card {
   position: relative;
@@ -180,6 +191,9 @@ h2 { margin: 0; font-size: 26px; letter-spacing: -.04em; }
 .admin-card { background: white; border: 1px solid #e2e8f0; border-radius: 28px; padding: 28px; box-shadow: 0 22px 60px rgba(15,23,42,.08); }
 .admin-title-row { display: flex; justify-content: space-between; align-items: start; gap: 16px; margin-bottom: 18px; }
 .admin-title-row button, .secondary-button { border-radius: 14px; padding: 11px 15px; background: #0f172a; color: white; font-weight: 900; }
+.admin-message { min-height: 24px; color: #64748b; font-weight: 800; }
+.admin-message.success { color: #166534; }
+.admin-message.error { color: #991b1b; }
 .light-form input { background: white; color: #0f172a; border-color: #cbd5e1; }
 .rules-title { margin-top: 30px; }
 .admin-list, .rule-list { border: 1px solid #e2e8f0; border-radius: 20px; overflow: hidden; }
@@ -232,7 +246,7 @@ h2 { margin: 0; font-size: 26px; letter-spacing: -.04em; }
 
 .overview-cards {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 16px;
   margin-bottom: 18px;
 }
@@ -288,7 +302,7 @@ h2 { margin: 0; font-size: 26px; letter-spacing: -.04em; }
 
 .overview-record-head,
 .overview-record-row {
-  grid-template-columns: 1.2fr 1fr 1fr 0.7fr 0.6fr;
+  grid-template-columns: 1.4fr 1fr 0.8fr 0.7fr 0.6fr;
 }
 
 .overview-key-head,

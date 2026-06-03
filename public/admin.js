@@ -2,17 +2,21 @@ const loginPanel = document.querySelector('#loginPanel');
 const configPanel = document.querySelector('#configPanel');
 const passwordInput = document.querySelector('#passwordInput');
 const loginButton = document.querySelector('#loginButton');
+const saveKeysButton = document.querySelector('#saveKeysButton');
 const loginError = document.querySelector('#loginError');
 const keyList = document.querySelector('#keyList');
+const keyCount = document.querySelector('#keyCount');
 const ruleList = document.querySelector('#ruleList');
 const adminMessage = document.querySelector('#adminMessage');
 let currentRulePeriod = 'daily';
+let savedVisibleCount = 0;
+let saveKeysResetTimer = null;
 
 loginButton.addEventListener('click', login);
 passwordInput.addEventListener('keydown', (event) => {
   if (event.key === 'Enter') login();
 });
-document.querySelector('#saveKeysButton').addEventListener('click', saveKeys);
+saveKeysButton.addEventListener('click', saveKeys);
 document.querySelector('#saveRulesButton').addEventListener('click', saveRules);
 document.querySelector('#addRuleButton').addEventListener('click', () => renderRules([...readRules(), { minCost: 0, name: '新境界', color: '#fbbf24' }]));
 document.querySelectorAll('[data-rule-period]').forEach((button) => {
@@ -41,7 +45,9 @@ async function login() {
 
 async function loadAdminData() {
   const [keysResponse, rulesResponse] = await Promise.all([fetch('/api/admin/keys'), fetch(`/api/admin/rank-rules?period=${currentRulePeriod}`)]);
-  renderKeys((await keysResponse.json()).items || []);
+  const keys = (await keysResponse.json()).items || [];
+  savedVisibleCount = keys.filter((key) => key.visible).length;
+  renderKeys(keys);
   renderRules((await rulesResponse.json()).items || []);
 }
 
@@ -58,6 +64,10 @@ function renderKeys(keys) {
       <em>${escapeHtml(key.status || '')}</em>
     </label>
   `).join('');
+  keyList.querySelectorAll('input[type="checkbox"]').forEach((input) => {
+    input.addEventListener('change', updateKeyCount);
+  });
+  updateKeyCount();
 }
 
 function renderRules(rules) {
@@ -76,12 +86,33 @@ function renderRules(rules) {
 
 async function saveKeys() {
   const keyIds = [...keyList.querySelectorAll('input:checked')].map((item) => item.value);
-  await fetch('/api/admin/visible-keys', {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ keyIds }),
-  });
-  adminMessage.textContent = 'Key 展示范围已保存';
+  if (saveKeysResetTimer) window.clearTimeout(saveKeysResetTimer);
+  setAdminMessage('正在保存 Key 展示范围...');
+  saveKeysButton.disabled = true;
+  saveKeysButton.textContent = '保存中...';
+  try {
+    const response = await fetch('/api/admin/visible-keys', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ keyIds }),
+    });
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({}));
+      setAdminMessage(payload.message || 'Key 展示范围保存失败', 'error');
+      return;
+    }
+    await loadAdminData();
+    setAdminMessage(`Key 展示范围已保存，当前展示 ${savedVisibleCount} 个`, 'success');
+    saveKeysButton.textContent = '已保存';
+  } catch (error) {
+    setAdminMessage('保存失败，请检查网络连接', 'error');
+  } finally {
+    saveKeysButton.disabled = false;
+    saveKeysResetTimer = window.setTimeout(() => {
+      saveKeysButton.textContent = '保存 Key';
+      saveKeysResetTimer = null;
+    }, 1200);
+  }
 }
 
 async function saveRules() {
@@ -90,7 +121,7 @@ async function saveRules() {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ rules: readRules() }),
   });
-  adminMessage.textContent = '境界规则已保存';
+  setAdminMessage('境界规则已保存', 'success');
 }
 
 function readRules() {
@@ -103,4 +134,16 @@ function readRules() {
 
 function escapeHtml(value) {
   return String(value).replace(/[&<>'"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char]));
+}
+
+function updateKeyCount() {
+  const total = keyList.querySelectorAll('input[type="checkbox"]').length;
+  const selected = keyList.querySelectorAll('input:checked').length;
+  keyCount.textContent = `已勾选 ${selected} / ${total}`;
+}
+
+function setAdminMessage(message, type = '') {
+  adminMessage.textContent = message;
+  adminMessage.classList.toggle('success', type === 'success');
+  adminMessage.classList.toggle('error', type === 'error');
 }
