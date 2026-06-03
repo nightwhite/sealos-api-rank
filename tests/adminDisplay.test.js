@@ -7,6 +7,7 @@ describe('admin key visibility controls', () => {
     const script = readFileSync('public/admin.js', 'utf8');
 
     expect(html).toContain('id="keyCount"');
+    expect(html).toMatch(/id="saveKeysButton"[\s\S]+id="adminMessage"[\s\S]+id="keyList"/);
     expect(script).toContain('function updateKeyCount()');
     expect(script).toContain('已勾选');
   });
@@ -26,5 +27,13 @@ describe('admin key visibility controls', () => {
     expect(script).toContain('savedVisibleCount = keys.filter((key) => key.visible).length;');
     expect(script).toContain('Key 展示范围已保存，当前展示 ${savedVisibleCount} 个');
     expect(script).not.toContain('Key 展示范围已保存，已展示 ${keyIds.length} 个');
+  });
+
+  it('shows immediate feedback while saving visible keys', () => {
+    const script = readFileSync('public/admin.js', 'utf8');
+
+    expect(script).toContain("adminMessage.textContent = '正在保存 Key 展示范围...';");
+    expect(script).toContain('saveKeysButton.disabled = true;');
+    expect(script).toContain('saveKeysButton.disabled = false;');
   });
 });
