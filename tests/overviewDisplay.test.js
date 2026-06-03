@@ -27,7 +27,8 @@ describe('overview display helpers', () => {
   it('formats large total token counts in millions', () => {
     expect(formatTokenMillions(578527808)).toBe('578.5M');
     expect(formatTokenMillions(1200000)).toBe('1.2M');
-    expect(formatTokenMillions(998000)).toBe('1.0M');
+    expect(formatTokenMillions(998000)).toBe('998,000');
+    expect(formatTokenMillions(1234)).toBe('1,234');
   });
 
   it('normalizes pagination values', () => {

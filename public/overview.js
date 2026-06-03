@@ -27,7 +27,9 @@ export function formatTokens(value) {
 }
 
 export function formatTokenMillions(value) {
-  return `${(Number(value || 0) / 1000000).toFixed(1)}M`;
+  const tokens = Number(value || 0);
+  if (tokens < 1000000) return formatTokens(tokens);
+  return `${(tokens / 1000000).toFixed(1)}M`;
 }
 
 export function normalizePage(value) {

@@ -17,7 +17,7 @@ export function createOverviewService({ client, db, now = () => new Date() }) {
     const normalized = String(apiKey || '').trim();
     if (!normalized) throw new Error('请先输入 API Key');
     const key = db.findAPIKeyByHash(hashAPIKey(normalized));
-    if (!key) throw new Error('请等待榜单刷新后再查看');
+    if (!key) throw new Error('未找到该 API Key。如果是新创建的 Key，请等待榜单刷新后再试；否则请检查输入是否正确。');
     if (key.status !== 'active') throw new Error('这个 API Key 当前不可用');
     return key;
   }
@@ -25,16 +25,15 @@ export function createOverviewService({ client, db, now = () => new Date() }) {
   return {
     async getOverview({ apiKey }) {
       const key = findCachedKey(apiKey);
-      const snapshot = db.getRankSnapshot('daily');
-      const snapshotRow = (snapshot.rows || []).find((row) => String(row.keyId) === String(key.id));
-      if (!snapshot.refreshedAt || !snapshotRow) throw new Error('请等待榜单刷新后再查看');
-      const todayCost = Number(snapshotRow.actualCost || 0);
-      const todayRequests = Number(snapshotRow.requests || 0);
-      const todayTokens = Number(snapshotRow.tokens || 0);
+      const today = formatShanghaiDate(now());
+      const stats = await client.getUsageStats(key.id, { startDate: today, endDate: today, dayCount: 1 });
+      const todayCost = Number(stats.total_actual_cost || 0);
+      const todayRequests = Number(stats.total_requests || 0);
+      const todayTokens = Number(stats.total_tokens || 0);
       const keyRows = [{
         id: String(key.id),
-        name: snapshotRow.keyName,
-        maskedKey: snapshotRow.maskedKey,
+        name: key.name || `Key #${key.id}`,
+        maskedKey: key.maskedKey,
         status: key.status,
         quota: Number(key.quota || 0),
         quotaUsed: Number(key.quotaUsed || 0),
@@ -47,7 +46,7 @@ export function createOverviewService({ client, db, now = () => new Date() }) {
         todayTokens,
       }];
       return {
-        refreshedAt: snapshot.refreshedAt,
+        refreshedAt: now().toISOString(),
         user: null,
         summary: {
           todayCost,

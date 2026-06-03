@@ -54,7 +54,7 @@ function createTestApp() {
       total: 1,
       items: [{ id: 9001, api_key_id: 1, model: 'gpt-4.1', input_tokens: 10, output_tokens: 20, cache_creation_tokens: 3, cache_read_tokens: 4, actual_cost: 0.042, duration_ms: 1300, request_type: 'stream', created_at: '2026-05-31T11:58:00.000Z' }],
     })),
-    getUsageStats: vi.fn(async () => ({ total_actual_cost: 10, total_tokens: 99 })),
+    getUsageStats: vi.fn(async () => ({ total_actual_cost: 10, total_requests: 8, total_tokens: 99 })),
   };
   const app = createApp({
     config: { adminPassword: 'secret' },

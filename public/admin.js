@@ -104,6 +104,8 @@ async function saveKeys() {
     await loadAdminData();
     adminMessage.textContent = `Key 展示范围已保存，当前展示 ${savedVisibleCount} 个`;
     saveKeysButton.textContent = '已保存';
+  } catch (error) {
+    adminMessage.textContent = '保存失败，请检查网络连接';
   } finally {
     saveKeysButton.disabled = false;
     saveKeysResetTimer = window.setTimeout(() => {

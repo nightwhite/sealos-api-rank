@@ -48,4 +48,10 @@ describe('admin key visibility controls', () => {
     expect(script).toContain("saveKeysButton.textContent = '保存 Key';");
     expect(styles).toContain('.admin-message');
   });
+
+  it('shows a failed save message when the network request throws', () => {
+    const script = readFileSync('public/admin.js', 'utf8');
+
+    expect(script).toMatch(/catch \(error\) \{[\s\S]+adminMessage\.textContent = '保存失败，请检查网络连接';[\s\S]+}/);
+  });
 });

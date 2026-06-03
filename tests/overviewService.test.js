@@ -45,6 +45,7 @@ function createFixture() {
       if (params.api_key_id === 8) return { total_actual_cost: 1.64, total_requests: 88 };
       return { total_actual_cost: 0, total_requests: 0 };
     }),
+    getUsageStats: vi.fn(async () => ({ total_actual_cost: 4.56, total_requests: 123, total_tokens: 4567 })),
     listAdminUsage: vi.fn(async () => ({
       page: 1,
       page_size: 20,
@@ -71,13 +72,37 @@ describe('createOverviewService', () => {
 
     const result = await service.getOverview({ apiKey: 'sk-alpha-secret-1111' });
 
+    expect(client.getUsageStats).toHaveBeenCalledWith('7', {
+      startDate: '2026-05-31',
+      endDate: '2026-05-31',
+      dayCount: 1,
+    });
     expect(client.getAdminUsageStats).not.toHaveBeenCalled();
     expect(client.listUsers).not.toHaveBeenCalled();
-    expect(result.summary).toEqual({ todayCost: 2.18, todayRequests: 98, todayTokens: 1234, activeKeyCount: 1, quota: 0, quotaUsed: 0, quotaRemaining: null, dailyLimit: 900, dailyLimitUsed: 470.72, dailyLimitRemaining: 429.28, statusName: '初燃灵火' });
+    expect(result.summary).toEqual({ todayCost: 4.56, todayRequests: 123, todayTokens: 4567, activeKeyCount: 1, quota: 0, quotaUsed: 0, quotaRemaining: null, dailyLimit: 900, dailyLimitUsed: 470.72, dailyLimitRemaining: 429.28, statusName: '初燃灵火' });
     expect(result.keys).toEqual([
-      expect.objectContaining({ id: '7', name: '金鳞主钥', status: 'active', todayCost: 2.18, todayRequests: 98, todayTokens: 1234, dailyLimit: 900, dailyLimitUsed: 470.72, dailyLimitRemaining: 429.28 }),
+      expect.objectContaining({ id: '7', name: '金鳞主钥', status: 'active', todayCost: 4.56, todayRequests: 123, todayTokens: 4567, dailyLimit: 900, dailyLimitUsed: 470.72, dailyLimitRemaining: 429.28 }),
     ]);
-    expect(result.refreshedAt).toBe('2026-05-31T11:55:00.000Z');
+    expect(result.refreshedAt).toBe('2026-05-31T04:00:00.000Z');
+  });
+
+  it('queries overview usage by Asia/Shanghai date instead of cached snapshot totals', async () => {
+    const previousTimezone = process.env.TZ;
+    process.env.TZ = 'UTC';
+    try {
+      const { client, db } = createFixture();
+      const service = createOverviewService({ client, db, now: () => new Date('2026-05-31T01:00:00+08:00') });
+      db.replaceAPIKeys([{ id: 7, userId: 10, keyHash: hashKey('sk-alpha-secret-1111'), name: '金鳞主钥', maskedKey: 'sk-alpha••••1111', status: 'active' }]);
+
+      await service.getOverview({ apiKey: 'sk-alpha-secret-1111' });
+
+      expect(client.getUsageStats).toHaveBeenCalledWith('7', expect.objectContaining({
+        startDate: '2026-05-31',
+        endDate: '2026-05-31',
+      }));
+    } finally {
+      process.env.TZ = previousTimezone;
+    }
   });
 
   it('rejects disabled API keys', async () => {
@@ -87,12 +112,20 @@ describe('createOverviewService', () => {
     await expect(service.getOverview({ apiKey: 'sk-disabled-secret-1111' })).rejects.toThrow('这个 API Key 当前不可用');
   });
 
-  it('waits for the daily snapshot before opening overview', async () => {
+  it('opens overview from realtime usage before the daily snapshot is ready', async () => {
     const { service, db } = createFixture();
     db.replaceAPIKeys([{ id: 7, userId: 10, keyHash: hashKey('sk-alpha-secret-1111'), name: '金鳞主钥', maskedKey: 'sk-alpha••••1111', status: 'active' }]);
     db.getRankSnapshot.mockReturnValueOnce({ period: 'daily', refreshedAt: null, rows: [] });
 
-    await expect(service.getOverview({ apiKey: 'sk-alpha-secret-1111' })).rejects.toThrow('请等待榜单刷新后再查看');
+    const result = await service.getOverview({ apiKey: 'sk-alpha-secret-1111' });
+
+    expect(result.summary).toMatchObject({ todayCost: 4.56, todayRequests: 123, todayTokens: 4567 });
+  });
+
+  it('explains missing cached API keys without implying the key is valid', async () => {
+    const { service } = createFixture();
+
+    await expect(service.getOverview({ apiKey: 'sk-unknown-secret' })).rejects.toThrow('未找到该 API Key。如果是新创建的 Key，请等待榜单刷新后再试；否则请检查输入是否正确。');
   });
 
   it('returns paginated records only for the submitted API key', async () => {
