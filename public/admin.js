@@ -8,6 +8,7 @@ const keyCount = document.querySelector('#keyCount');
 const ruleList = document.querySelector('#ruleList');
 const adminMessage = document.querySelector('#adminMessage');
 let currentRulePeriod = 'daily';
+let savedVisibleCount = 0;
 
 loginButton.addEventListener('click', login);
 passwordInput.addEventListener('keydown', (event) => {
@@ -42,7 +43,9 @@ async function login() {
 
 async function loadAdminData() {
   const [keysResponse, rulesResponse] = await Promise.all([fetch('/api/admin/keys'), fetch(`/api/admin/rank-rules?period=${currentRulePeriod}`)]);
-  renderKeys((await keysResponse.json()).items || []);
+  const keys = (await keysResponse.json()).items || [];
+  savedVisibleCount = keys.filter((key) => key.visible).length;
+  renderKeys(keys);
   renderRules((await rulesResponse.json()).items || []);
 }
 
@@ -92,7 +95,7 @@ async function saveKeys() {
     return;
   }
   await loadAdminData();
-  adminMessage.textContent = `Key 展示范围已保存，已展示 ${keyIds.length} 个`;
+  adminMessage.textContent = `Key 展示范围已保存，当前展示 ${savedVisibleCount} 个`;
 }
 
 async function saveRules() {

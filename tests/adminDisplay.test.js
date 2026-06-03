@@ -18,4 +18,13 @@ describe('admin key visibility controls', () => {
     expect(script).toContain('if (!response.ok)');
     expect(script).toContain('await loadAdminData();');
   });
+
+  it('reports the server-confirmed visible key count after saving', () => {
+    const script = readFileSync('public/admin.js', 'utf8');
+
+    expect(script).toContain('let savedVisibleCount = 0;');
+    expect(script).toContain('savedVisibleCount = keys.filter((key) => key.visible).length;');
+    expect(script).toContain('Key 展示范围已保存，当前展示 ${savedVisibleCount} 个');
+    expect(script).not.toContain('Key 展示范围已保存，已展示 ${keyIds.length} 个');
+  });
 });
