@@ -47,6 +47,25 @@ function createMemoryDb() {
   };
 }
 
+function makeSnapshotRow(overrides) {
+  return {
+    rank: null,
+    keyId: '1',
+    keyName: 'Alpha',
+    maskedKey: 'sk-alpha••••1111',
+    actualCost: 0,
+    realmCost: 0,
+    tokens: 0,
+    rankName: '凡人试炼',
+    rankColor: '#94a3b8',
+    nextRankName: null,
+    costToNextRank: null,
+    progress: 1,
+    visible: false,
+    ...overrides,
+  };
+}
+
 describe('periodDateRange', () => {
   it('builds daily and monthly date ranges', () => {
     const now = new Date('2026-05-28T12:00:00+08:00');
@@ -200,6 +219,30 @@ describe('createRankService', () => {
 
     expect(result.rankings).toEqual([expect.objectContaining({ keyId: '1', rank: 1, visible: true })]);
     expect(result.currentKey).toMatchObject({ keyId: '1', rank: 1, visible: true, isCurrentUserKey: true });
+  });
+
+  it('orders rankings by recalculated ranks after visible keys change', async () => {
+    const db = createMemoryDb();
+    db.visibleIds = ['1', '2', '3'];
+    db.replaceAPIKeys([
+      { id: 1, keyHash: keyHash('sk-alpha-secret-1111'), name: 'Alpha', maskedKey: 'sk-alpha••••1111', status: 'active' },
+      { id: 2, keyHash: keyHash('sk-beta-secret-2222'), name: 'Beta', maskedKey: 'sk-beta••••2222', status: 'active' },
+      { id: 3, keyHash: keyHash('sk-gamma-secret-3333'), name: 'Gamma', maskedKey: 'sk-gamma••••3333', status: 'active' },
+    ]);
+    db.replaceRankSnapshot('daily', {
+      refreshedAt: '2026-05-28T04:00:00.000Z',
+      rows: [
+        makeSnapshotRow({ rank: 1, keyId: '1', keyName: 'Alpha', actualCost: 50, tokens: 500, visible: true }),
+        makeSnapshotRow({ rank: 2, keyId: '2', keyName: 'Beta', actualCost: 40, tokens: 400, visible: true }),
+        makeSnapshotRow({ rank: null, keyId: '3', keyName: 'Gamma', actualCost: 45, tokens: 450, visible: false }),
+      ],
+    });
+    const service = createRankService({ client: {}, db });
+
+    const result = await service.getRankings({ apiKey: 'sk-alpha-secret-1111', period: 'daily' });
+
+    expect(result.rankings.map((row) => row.keyId)).toEqual(['1', '3', '2']);
+    expect(result.rankings.map((row) => row.rank)).toEqual([1, 2, 3]);
   });
 
   it('rejects keys that are not in the local active key cache', async () => {

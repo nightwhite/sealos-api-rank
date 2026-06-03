@@ -36,4 +36,16 @@ describe('admin key visibility controls', () => {
     expect(script).toContain('saveKeysButton.disabled = true;');
     expect(script).toContain('saveKeysButton.disabled = false;');
   });
+
+  it('makes key save status obvious on the button and status text', () => {
+    const html = readFileSync('public/admin.html', 'utf8');
+    const script = readFileSync('public/admin.js', 'utf8');
+    const styles = readFileSync('public/styles.css', 'utf8');
+
+    expect(html).toContain('id="adminMessage" class="admin-message" role="status"');
+    expect(script).toContain("saveKeysButton.textContent = '保存中...';");
+    expect(script).toContain("saveKeysButton.textContent = '已保存';");
+    expect(script).toContain("saveKeysButton.textContent = '保存 Key';");
+    expect(styles).toContain('.admin-message');
+  });
 });

@@ -70,7 +70,9 @@ function applyCurrentVisibility(rows, visibleKeyIds) {
     .sort(compareVisibleRows)
     .map((row, index) => ({ ...row, rank: index + 1 }));
   const rankByKeyId = new Map(sortedVisibleRows.map((row) => [row.keyId, row.rank]));
-  return markedRows.map((row) => ({ ...row, rank: rankByKeyId.get(row.keyId) || null }));
+  return markedRows
+    .map((row) => ({ ...row, rank: rankByKeyId.get(row.keyId) || null }))
+    .sort(compareSnapshotRows);
 }
 
 function compareVisibleRows(first, second) {

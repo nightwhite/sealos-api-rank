@@ -10,6 +10,7 @@ const ruleList = document.querySelector('#ruleList');
 const adminMessage = document.querySelector('#adminMessage');
 let currentRulePeriod = 'daily';
 let savedVisibleCount = 0;
+let saveKeysResetTimer = null;
 
 loginButton.addEventListener('click', login);
 passwordInput.addEventListener('keydown', (event) => {
@@ -85,8 +86,10 @@ function renderRules(rules) {
 
 async function saveKeys() {
   const keyIds = [...keyList.querySelectorAll('input:checked')].map((item) => item.value);
+  if (saveKeysResetTimer) window.clearTimeout(saveKeysResetTimer);
   adminMessage.textContent = '正在保存 Key 展示范围...';
   saveKeysButton.disabled = true;
+  saveKeysButton.textContent = '保存中...';
   try {
     const response = await fetch('/api/admin/visible-keys', {
       method: 'PUT',
@@ -100,8 +103,13 @@ async function saveKeys() {
     }
     await loadAdminData();
     adminMessage.textContent = `Key 展示范围已保存，当前展示 ${savedVisibleCount} 个`;
+    saveKeysButton.textContent = '已保存';
   } finally {
     saveKeysButton.disabled = false;
+    saveKeysResetTimer = window.setTimeout(() => {
+      saveKeysButton.textContent = '保存 Key';
+      saveKeysResetTimer = null;
+    }, 1200);
   }
 }
 
