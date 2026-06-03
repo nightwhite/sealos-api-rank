@@ -117,6 +117,24 @@ describe('createOverviewService', () => {
     }
   });
 
+  it('uses the same current time for overview date range and refresh timestamp', async () => {
+    const { client, db } = createFixture();
+    const times = [
+      new Date('2026-05-31T23:59:59+08:00'),
+      new Date('2026-06-01T00:00:01+08:00'),
+    ];
+    const service = createOverviewService({ client, db, now: () => times.shift() });
+    db.replaceAPIKeys([{ id: 7, userId: 10, keyHash: hashKey('sk-alpha-secret-1111'), name: '金鳞主钥', maskedKey: 'sk-alpha••••1111', status: 'active' }]);
+
+    const result = await service.getOverview({ apiKey: 'sk-alpha-secret-1111' });
+
+    expect(client.getUsageStats).toHaveBeenCalledWith('7', expect.objectContaining({
+      startDate: '2026-05-31',
+      endDate: '2026-05-31',
+    }));
+    expect(result.refreshedAt).toBe('2026-05-31T15:59:59.000Z');
+  });
+
   it('rejects disabled API keys', async () => {
     const { service, db } = createFixture();
     db.replaceAPIKeys([{ id: 7, userId: 10, keyHash: hashKey('sk-disabled-secret-1111'), name: 'Disabled', maskedKey: 'sk-disabled••••1111', status: 'disabled' }]);
